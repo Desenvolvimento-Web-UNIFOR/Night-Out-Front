@@ -1,37 +1,36 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Home, 
-  Table, 
-  Building, 
-  Calendar, 
-  User, 
+import {
+  Home,
+  Table,
+  User,
   LogIn,
   UserPlus,
   Menu,
-  X
+  X,
 } from 'lucide-react';
-
-const menuItems = [
-  { icon: Home, label: 'Painel', path: '/' },
-  { icon: Table, label: 'Tabelas', path: '/tabelas' }
-];
-
-const accountItems = [
-  { icon: User, label: 'Perfil', path: '/perfil' },
-  { icon: UserPlus, label: 'Registrar-se', path: '/register' },
-  { icon: LogIn, label: 'Logar', path: '/login' }
-];
 
 export default function Sidebar({ currentPath, onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Lê o papel salvo no login
+  const role =
+    (typeof window !== 'undefined' && sessionStorage.getItem('role')) || 'user';
+
+  // Caminhos dinâmicos
+  const homePath =
+    role === 'artist'
+      ? '/dashboard-artista'
+      : role === 'establishment'
+      ? '/admin'
+      : '/';
+
+  const profilePath =
+    role === 'artist' ? '/perfil-artista' : '/perfil';
+
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -44,6 +43,26 @@ export default function Sidebar({ currentPath, onNavigate }) {
     if (isMobile) setIsOpen(false);
   };
 
+  // === Configuração do menu conforme role ===
+  let menuPrincipal = [];
+  let conta = [];
+
+  if (role === 'user' || role === 'artist') {
+    // menus reduzidos (usuário e artista)
+    menuPrincipal = [{ icon: Home, label: 'Painel', path: homePath }];
+    conta = [{ icon: User, label: 'Perfil', path: profilePath }];
+  } else {
+    // admin / estabelecimento ainda tem tudo
+    menuPrincipal = [
+      { icon: Home, label: 'Painel', path: homePath },
+      { icon: Table, label: 'Tabelas', path: '/tabelas' },
+    ];
+    conta = [
+      { icon: User, label: 'Perfil', path: profilePath },
+    ];
+  }
+
+  // === Renderização da sidebar ===
   const sidebarContent = (
     <div className="h-full flex flex-col">
       <div className="p-6 border-b border-border">
@@ -58,7 +77,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
             Menu Principal
           </h3>
           <nav className="space-y-2">
-            {menuItems.map((item) => (
+            {menuPrincipal.map((item) => (
               <button
                 key={item.path}
                 onClick={() => handleItemClick(item.path)}
@@ -67,7 +86,6 @@ export default function Sidebar({ currentPath, onNavigate }) {
                     ? 'bg-primary/20 text-primary border border-primary/30'
                     : 'text-muted hover:text-text hover:bg-panel/50'
                 } focus-ring`}
-                aria-label={`Navegar para ${item.label}`}
               >
                 <item.icon size={20} />
                 <span className="font-medium">{item.label}</span>
@@ -81,7 +99,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
             Conta
           </h3>
           <nav className="space-y-2">
-            {accountItems.map((item) => (
+            {conta.map((item) => (
               <button
                 key={item.path}
                 onClick={() => handleItemClick(item.path)}
@@ -90,7 +108,6 @@ export default function Sidebar({ currentPath, onNavigate }) {
                     ? 'bg-primary/20 text-primary border border-primary/30'
                     : 'text-muted hover:text-text hover:bg-panel/50'
                 } focus-ring`}
-                aria-label={`Navegar para ${item.label}`}
               >
                 <item.icon size={20} />
                 <span className="font-medium">{item.label}</span>
@@ -102,6 +119,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
     </div>
   );
 
+  // === Sidebar mobile ===
   if (isMobile) {
     return (
       <>
@@ -114,7 +132,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
         </button>
 
         {isOpen && (
-          <div 
+          <div
             className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
@@ -124,7 +142,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
         <motion.div
           initial={{ x: -300 }}
           animate={{ x: isOpen ? 0 : -300 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className="fixed left-0 top-0 z-50 w-80 h-full glass-panel"
         >
           {sidebarContent}
@@ -133,6 +151,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
     );
   }
 
+  // === Sidebar desktop ===
   return (
     <div className="fixed left-0 top-0 w-80 h-full glass-panel z-30">
       {sidebarContent}

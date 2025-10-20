@@ -11,8 +11,12 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import EventPage from './pages/EventPage';
 import FeedCliente from './pages/FeedCliente';
+import DashboardArtista from './pages/DashboardArtista';
+import PerfilArtista from './pages/PerfilArtista';
 
 const routes = {
+  '/dashboard-artista': DashboardArtista,
+  '/perfil-artista': PerfilArtista, 
   '/admin': Dashboard,
   '/tabelas': Tabelas,
   '/estabelecimentos': Estabelecimentos,
@@ -24,7 +28,18 @@ const routes = {
   '/': FeedCliente,
 };
 
-const layoutRoutes = ['/', '/tabelas', '/estabelecimentos', '/eventos', '/perfil', '/event/:id'];
+const layoutRoutes = [
+  '/',
+  '/tabelas',
+  '/estabelecimentos',
+  '/eventos',
+  '/perfil',
+  '/perfil-artista',
+  '/dashboard-artista',
+  '/admin',
+  '/event/:id'
+];
+
 
 function matchRoute(path) {
   for (const pattern of Object.keys(routes)) {

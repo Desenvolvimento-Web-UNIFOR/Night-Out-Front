@@ -4,7 +4,7 @@ import { eventsData } from "../data/mocks";
 
 const USER = {
   name: "Rafael",
-  city: "São Paulo",
+  city: "Fortaleza",
   interests: ["Eletrônica", "Funk", "Sertanejo", "Pop"],
 };
 
