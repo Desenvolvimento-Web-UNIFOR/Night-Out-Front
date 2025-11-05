@@ -38,7 +38,6 @@ const handleSubmit = (e) => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Lado esquerdo com imagem */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <div
           className="absolute inset-0 bg-gradient-to-br from-bg via-bgAlt to-panel"
@@ -57,7 +56,6 @@ const handleSubmit = (e) => {
         </div>
       </div>
 
-      {/* Lado direito com o formulário */}
       <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -71,7 +69,6 @@ const handleSubmit = (e) => {
               <p className="text-muted mt-2">Escolha o tipo de acesso e entre com suas credenciais</p>
             </div>
 
-            {/* SELETOR DE FUNÇÃO */}
             <div className="mt-2 mb-6 bg-white/10 rounded-xl p-1 border border-white/20 grid grid-cols-3">
               {ROLES.map((r) => {
                 const active = role === r.key;
@@ -95,7 +92,6 @@ const handleSubmit = (e) => {
               {ROLES.find((r) => r.key === role)?.subtitle}
             </p>
 
-            {/* Botões sociais */}
             <div className="space-y-3 mb-6">
               <button className="w-full flex items-center justify-center space-x-3 bg-[#1877f2] hover:bg-[#1877f2]/90 text-white py-3 px-4 rounded-xl font-medium transition-colors focus-ring">
                 <Facebook size={20} />
@@ -108,7 +104,6 @@ const handleSubmit = (e) => {
               </button>
             </div>
 
-            {/* Separador */}
             <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border" />
@@ -118,7 +113,6 @@ const handleSubmit = (e) => {
               </div>
             </div>
 
-            {/* Formulário */}
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-text mb-2">
@@ -158,7 +152,6 @@ const handleSubmit = (e) => {
                 </div>
               </div>
 
-              {/* Lembrar e senha */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center">
                   <input
@@ -174,7 +167,6 @@ const handleSubmit = (e) => {
                 </button>
               </div>
 
-              {/* Botão entrar */}
               <button type="submit" className="w-full btn-primary py-3 text-lg glow-primary">
                 Entrar
               </button>

@@ -72,7 +72,6 @@ const RECENTS = [
 export default function DashboardArtista({ onNavigate }) {
   return (
     <div className="space-y-6">
-      {/* Top: avatar + boas vindas + info rápida */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -110,7 +109,6 @@ export default function DashboardArtista({ onNavigate }) {
         </div>
       </motion.div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {KPIS.map((k, i) => (
           <motion.div
@@ -133,9 +131,7 @@ export default function DashboardArtista({ onNavigate }) {
         ))}
       </div>
 
-      {/* Proposta em destaque + Próximos eventos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Proposta */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -175,7 +171,6 @@ export default function DashboardArtista({ onNavigate }) {
           </div>
         </motion.div>
 
-        {/* Próximos eventos (lista/card) */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -222,7 +217,6 @@ export default function DashboardArtista({ onNavigate }) {
         </motion.div>
       </div>
 
-      {/* Estabelecimentos vistos recentemente */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

@@ -20,7 +20,6 @@ const proposals = [
 export default function PerfilArtista() {
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="glass p-8">
         <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
           <img src={artist.avatar} alt={artist.name} className="w-24 h-24 rounded-2xl object-cover ring-2 ring-primary/30" />
@@ -42,7 +41,6 @@ export default function PerfilArtista() {
         </div>
       </motion.div>
 
-      {/* Blocos de info */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="glass p-6">
           <h3 className="text-lg font-semibold mb-4">Informações do Perfil</h3>
