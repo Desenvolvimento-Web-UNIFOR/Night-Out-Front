@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+
 import Sidebar from './components/Sidebar';
 import TopbarTabs from './components/TopbarTabs';
+
 import Dashboard from './pages/Dashboard';
 import Tabelas from './pages/Tabelas';
 import Estabelecimentos from './pages/Estabelecimentos';
@@ -14,9 +16,56 @@ import FeedCliente from './pages/FeedCliente';
 import DashboardArtista from './pages/DashboardArtista';
 import PerfilArtista from './pages/PerfilArtista';
 
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function getToken() {
+  return localStorage.getItem('token');
+}
+
+function isAuthed() {
+  return Boolean(getToken());
+}
+
+function normalizeUserType(raw) {
+  if (!raw) return 'CLIENTE';
+  const txt = String(raw)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+  if (['USUARIO', 'USUÁRIO', 'USER'].includes(txt)) return 'CLIENTE';
+  if (['ESTABELECIMENTO', 'CASA DE SHOW', 'CASA_SHOW'].includes(txt))
+    return 'CASASHOW';
+  if (['CLIENTE', 'ARTISTA', 'ADMINISTRADOR', 'CASASHOW'].includes(txt))
+    return txt;
+  return 'CLIENTE';
+}
+
+const HOME_BY_TYPE = {
+  CLIENTE: '/',
+  ARTISTA: '/dashboard-artista',
+  ADMINISTRADOR: '/admin',
+  CASASHOW: '/admin',
+};
+
+const ALLOWED_BY_TYPE = {
+  CLIENTE: new Set(['/', '/perfil', '/event/:id']),
+  ARTISTA: new Set(['/dashboard-artista', '/perfil-artista']),
+  ADMINISTRADOR: new Set(['/admin', '/tabelas', '/perfil']),
+  CASASHOW: new Set(['/admin', '/tabelas', '/perfil']),
+};
+
+const PUBLIC_PATHS = new Set(['/login', '/register']);
+
 const routes = {
   '/dashboard-artista': DashboardArtista,
-  '/perfil-artista': PerfilArtista, 
+  '/perfil-artista': PerfilArtista,
   '/admin': Dashboard,
   '/tabelas': Tabelas,
   '/estabelecimentos': Estabelecimentos,
@@ -37,9 +86,8 @@ const layoutRoutes = [
   '/perfil-artista',
   '/dashboard-artista',
   '/admin',
-  '/event/:id'
+  '/event/:id',
 ];
-
 
 function matchRoute(path) {
   for (const pattern of Object.keys(routes)) {
@@ -56,7 +104,9 @@ function matchRoute(path) {
     const m = path.match(regex);
     if (m) {
       const params = {};
-      paramNames.forEach((name, i) => (params[name] = decodeURIComponent(m[i + 1])));
+      paramNames.forEach(
+        (name, i) => (params[name] = decodeURIComponent(m[i + 1]))
+      );
       return { Component: routes[pattern], params, pattern };
     }
   }
@@ -66,6 +116,42 @@ function matchRoute(path) {
 export default function App() {
   const [currentPath, setCurrentPath] = useState('/login');
   const [isMobile, setIsMobile] = useState(false);
+
+  const authed = isAuthed();
+  const user = getStoredUser();
+  const userType = useMemo(
+    () => normalizeUserType(user?.tipo ?? user?.role),
+    [user]
+  );
+  const homePath = HOME_BY_TYPE[userType] || '/';
+
+  useEffect(() => {
+    if (!authed && !PUBLIC_PATHS.has(currentPath)) {
+      if (currentPath !== '/login') setCurrentPath('/login');
+      return;
+    }
+
+    if (authed && PUBLIC_PATHS.has(currentPath)) {
+      if (currentPath !== homePath) setCurrentPath(homePath);
+      return;
+    }
+
+    if (authed) {
+      const allowed = ALLOWED_BY_TYPE[userType] || new Set([homePath]);
+      const isAllowed =
+        [...allowed].some((pattern) => {
+          const regex = new RegExp(
+            '^' +
+              pattern.replace(/:[^/]+/g, '([^/]+)') +
+              '$'
+          );
+          return regex.test(currentPath);
+        }) || allowed.has(currentPath);
+      if (!isAllowed && currentPath !== homePath) {
+        setCurrentPath(homePath);
+      }
+    }
+  }, [authed, currentPath, userType, homePath]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -100,11 +186,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg via-bgAlt to-bg">
       <Sidebar currentPath={currentPath} onNavigate={navigate} />
-
       <div className={`transition-all duration-300 ${!isMobile ? 'ml-80' : 'ml-0'}`}>
         <main className="p-6 max-w-7xl mx-auto">
           <TopbarTabs currentPath={currentPath} onNavigate={navigate} />
-
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPath}
