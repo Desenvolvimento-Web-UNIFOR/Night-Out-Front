@@ -1,15 +1,32 @@
+// src/Login.jsx
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Facebook } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { useState } from 'react';
 import { login } from '../services/auth';
 
-const TARGET_BY_ROLE = {
-  artist: '/dashboard-artista',
-  establishment: '/admin',
-  admin: '/admin',
-  user: '/',
+const TARGET_BY_TYPE = {
+  CLIENTE: '/',
+  ARTISTA: '/dashboard-artista',
+  ADMINISTRADOR: '/admin',
+  CASASHOW: '/admin',
 };
+
+function normalizeUserType(raw) {
+  if (!raw) return 'CLIENTE';
+  const txt = String(raw)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+
+  if (['USUARIO', 'USUÁRIO', 'USER'].includes(txt)) return 'CLIENTE';
+  if (['ESTABELECIMENTO', 'CASA DE SHOW', 'CASA_SHOW'].includes(txt)) return 'CASASHOW';
+
+  if (['CLIENTE', 'ARTISTA', 'ADMINISTRADOR', 'CASASHOW'].includes(txt)) return txt;
+
+  return 'CLIENTE';
+}
 
 export default function Login({ onNavigate }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -26,13 +43,14 @@ export default function Login({ onNavigate }) {
       const email = String(form.get('email') || '').trim();
       const password = String(form.get('password') || '');
 
-      const { token, user } = await login({ email, password });
+      const { token, user } = await login({ email, senha: password });
 
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
 
-      const role = String(user?.role || '').toLowerCase();
-      onNavigate(TARGET_BY_ROLE[role] || '/');
+      const userType = normalizeUserType(user?.tipo ?? user?.role);
+      const target = TARGET_BY_TYPE[userType] || '/';
+      onNavigate(target);
     } catch (err) {
       setError(err?.message || 'Falha no login.');
     } finally {
