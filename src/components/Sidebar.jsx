@@ -14,11 +14,9 @@ export default function Sidebar({ currentPath, onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Lê o papel salvo no login
   const role =
     (typeof window !== 'undefined' && sessionStorage.getItem('role')) || 'user';
 
-  // Caminhos dinâmicos
   const homePath =
     role === 'artist'
       ? '/dashboard-artista'
@@ -43,16 +41,13 @@ export default function Sidebar({ currentPath, onNavigate }) {
     if (isMobile) setIsOpen(false);
   };
 
-  // === Configuração do menu conforme role ===
   let menuPrincipal = [];
   let conta = [];
 
   if (role === 'user' || role === 'artist') {
-    // menus reduzidos (usuário e artista)
     menuPrincipal = [{ icon: Home, label: 'Painel', path: homePath }];
     conta = [{ icon: User, label: 'Perfil', path: profilePath }];
   } else {
-    // admin / estabelecimento ainda tem tudo
     menuPrincipal = [
       { icon: Home, label: 'Painel', path: homePath },
       { icon: Table, label: 'Tabelas', path: '/tabelas' },
@@ -62,7 +57,6 @@ export default function Sidebar({ currentPath, onNavigate }) {
     ];
   }
 
-  // === Renderização da sidebar ===
   const sidebarContent = (
     <div className="h-full flex flex-col">
       <div className="p-6 border-b border-border">
@@ -119,7 +113,6 @@ export default function Sidebar({ currentPath, onNavigate }) {
     </div>
   );
 
-  // === Sidebar mobile ===
   if (isMobile) {
     return (
       <>
@@ -151,7 +144,6 @@ export default function Sidebar({ currentPath, onNavigate }) {
     );
   }
 
-  // === Sidebar desktop ===
   return (
     <div className="fixed left-0 top-0 w-80 h-full glass-panel z-30">
       {sidebarContent}
