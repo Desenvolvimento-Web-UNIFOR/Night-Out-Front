@@ -4,30 +4,51 @@ import {
   Home,
   Table,
   User,
-  LogIn,
-  UserPlus,
+  LogOut,
   Menu,
   X,
 } from 'lucide-react';
+import { logout } from '../services/auth';
+
+function normalizeUserType(raw) {
+  if (!raw) return 'CLIENTE';
+  const txt = String(raw)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+  if (['USUARIO', 'USUÁRIO', 'USER'].includes(txt)) return 'CLIENTE';
+  if (['ESTABELECIMENTO', 'CASA DE SHOW', 'CASA_SHOW'].includes(txt)) return 'CASASHOW';
+  if (['CLIENTE', 'ARTISTA', 'ADMINISTRADOR', 'CASASHOW'].includes(txt)) return txt;
+  return 'CLIENTE';
+}
+
+const HOME_BY_TYPE = {
+  CLIENTE: '/',
+  ARTISTA: '/dashboard-artista',
+  ADMINISTRADOR: '/admin',
+  CASASHOW: '/admin',
+};
+
+const PROFILE_BY_TYPE = {
+  CLIENTE: '/perfil',
+  ARTISTA: '/perfil-artista',
+  ADMINISTRADOR: '/perfil',
+  CASASHOW: '/perfil',
+};
 
 export default function Sidebar({ currentPath, onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Lê o papel salvo no login
-  const role =
-    (typeof window !== 'undefined' && sessionStorage.getItem('role')) || 'user';
+  const user =
+    (typeof window !== 'undefined' &&
+      JSON.parse(localStorage.getItem('user') || '{}')) ||
+    {};
+  const userType = normalizeUserType(user?.tipo ?? user?.role);
 
-  // Caminhos dinâmicos
-  const homePath =
-    role === 'artist'
-      ? '/dashboard-artista'
-      : role === 'establishment'
-      ? '/admin'
-      : '/';
-
-  const profilePath =
-    role === 'artist' ? '/perfil-artista' : '/perfil';
+  const homePath = HOME_BY_TYPE[userType] || '/';
+  const profilePath = PROFILE_BY_TYPE[userType] || '/perfil';
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -43,32 +64,34 @@ export default function Sidebar({ currentPath, onNavigate }) {
     if (isMobile) setIsOpen(false);
   };
 
-  // === Configuração do menu conforme role ===
+  const handleLogout = () => {
+    logout();
+    onNavigate('/login');
+  };
+
   let menuPrincipal = [];
   let conta = [];
 
-  if (role === 'user' || role === 'artist') {
-    // menus reduzidos (usuário e artista)
+  if (userType === 'CLIENTE' || userType === 'ARTISTA') {
     menuPrincipal = [{ icon: Home, label: 'Painel', path: homePath }];
     conta = [{ icon: User, label: 'Perfil', path: profilePath }];
   } else {
-    // admin / estabelecimento ainda tem tudo
     menuPrincipal = [
       { icon: Home, label: 'Painel', path: homePath },
       { icon: Table, label: 'Tabelas', path: '/tabelas' },
     ];
-    conta = [
-      { icon: User, label: 'Perfil', path: profilePath },
-    ];
+    conta = [{ icon: User, label: 'Perfil', path: profilePath }];
   }
 
-  // === Renderização da sidebar ===
   const sidebarContent = (
     <div className="h-full flex flex-col">
       <div className="p-6 border-b border-border">
         <h1 className="text-2xl font-bold text-text tracking-tight">
           NIGHT OUT
         </h1>
+        <p className="text-sm text-muted mt-1">
+          {user?.nome || user?.name || 'Usuário'} • {userType}
+        </p>
       </div>
 
       <div className="flex-1 p-6 space-y-8">
@@ -113,13 +136,20 @@ export default function Sidebar({ currentPath, onNavigate }) {
                 <span className="font-medium">{item.label}</span>
               </button>
             ))}
+
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-muted hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 focus-ring mt-2"
+            >
+              <LogOut size={20} />
+              <span className="font-medium">Sair</span>
+            </button>
           </nav>
         </div>
       </div>
     </div>
   );
 
-  // === Sidebar mobile ===
   if (isMobile) {
     return (
       <>
@@ -151,7 +181,6 @@ export default function Sidebar({ currentPath, onNavigate }) {
     );
   }
 
-  // === Sidebar desktop ===
   return (
     <div className="fixed left-0 top-0 w-80 h-full glass-panel z-30">
       {sidebarContent}

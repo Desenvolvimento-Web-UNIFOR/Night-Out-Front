@@ -3,6 +3,7 @@ import { Search, Filter, Edit, MoreVertical } from 'lucide-react';
 import { employeesData, artistsData } from '../data/mocks';
 import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
+import AdminSolicitacoes from '../components/AdminSolicitacoes';
 
 export default function Tabelas() {
   const emp = usePaginatedData({ mode: "local", localData: employeesData, pageSize: 5 });
@@ -10,7 +11,14 @@ export default function Tabelas() {
 
   return (
     <div className="space-y-8">
-      {/* Funcionários */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <AdminSolicitacoes />
+      </motion.div>
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="glass">
         <div className="p-6 border-b border-border">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -72,7 +80,6 @@ export default function Tabelas() {
         </div>
       </motion.div>
 
-      {/* Artistas */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="glass">
         <div className="p-6 border-b border-border">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
