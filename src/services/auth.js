@@ -13,8 +13,15 @@ export async function login({ email, password }) {
       const j = await res.json();
       message = j?.message || j?.error || message;
     } catch {
+  // Falha ao interpretar o corpo de erro. Logamos para debug.
+  // Não sobrescrevemos a mensagem padrão, pois pode não haver JSON.
+  console.error("login: falha ao parsear resposta de erro do servidor");
     }
-    throw new Error(message);
+    const err = new Error(message);
+    // anexar status para que o front-end consiga tomar decisões de UI
+    err.status = res.status;
+    err.statusText = res.statusText;
+    throw err;
   }
 
   const data = await res.json();
@@ -40,7 +47,9 @@ export async function login({ email, password }) {
 export function getCurrentUser() {
   try {
     return JSON.parse(localStorage.getItem("user") || "{}");
-  } catch {
+  } catch (err) {
+  // Se houver problema ao ler/parsear, retornamos objeto vazio e logamos o erro.
+  console.error("getCurrentUser: erro ao parsear usuário do localStorage:", err);
     return {};
   }
 }
@@ -72,13 +81,22 @@ export async function authFetch(path, options = {}) {
     try {
       const j = await res.json();
       message = j?.message || j?.error || message;
-    } catch {}
-    throw new Error(message);
+    } catch (err) {
+  // Não foi possível interpretar o JSON de erro. Logamos para diagnóstico.
+  console.error("authFetch: falha ao parsear corpo de erro como JSON:", err);
+    }
+    const err = new Error(message);
+    // incluir informações do status HTTP para consumo pela UI
+    err.status = res.status;
+    err.statusText = res.statusText;
+    throw err;
   }
 
   try {
     return await res.json();
-  } catch {
+  } catch (err) {
+  // Resposta não é JSON — tentamos retornar como texto. Logamos o motivo.
+  console.error("authFetch: resposta não é JSON, retornando texto (parse error):", err);
     return await res.text();
   }
 }
