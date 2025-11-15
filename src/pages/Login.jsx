@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Facebook } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { login } from '../services/auth';
 
 const TARGET_BY_TYPE = {
@@ -43,7 +44,7 @@ export default function Login({ onNavigate }) {
       const email = String(form.get('email') || '').trim();
       const password = String(form.get('password') || '');
 
-      const { token, user } = await login({ email, senha: password });
+      const { token, user } = await login({ email, password });
 
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
@@ -211,3 +212,7 @@ export default function Login({ onNavigate }) {
     </div>
   );
 }
+
+Login.propTypes = {
+  onNavigate: PropTypes.func.isRequired,
+};
