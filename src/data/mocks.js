@@ -40,6 +40,33 @@ export const employeesData = [
     joinDate: "15/03/2024"
   },
   {
+    id: 10,
+    name: "Ana Silva",
+    email: "ana@nightout.com",
+    role: "Gerente",
+    status: "Online",
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=40&h=40&fit=crop&crop=face&auto=format",
+    joinDate: "15/03/2024"
+  },
+  {
+    id: 15,
+    name: "Ana Silva",
+    email: "ana@nightout.com",
+    role: "Gerente",
+    status: "Online",
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=40&h=40&fit=crop&crop=face&auto=format",
+    joinDate: "15/03/2024"
+  },
+  {
+    id: 17,
+    name: "Ana Silva",
+    email: "ana@nightout.com",
+    role: "Gerente",
+    status: "Online",
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=40&h=40&fit=crop&crop=face&auto=format",
+    joinDate: "15/03/2024"
+  },
+  {
     id: 2,
     name: "Carlos Mendes",
     email: "carlos@nightout.com", 
