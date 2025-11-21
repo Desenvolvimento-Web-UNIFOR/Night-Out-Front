@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug Login Data</title>
+</head>
+<body>
+  <h1>Debug - Dados do Login</h1>
+  <pre id="output"></pre>
+  
+  <script>
+    const output = document.getElementById('output');
+    
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    
+    let user = null;
+    try {
+      user = JSON.parse(userStr);
+    } catch (e) {
+      user = { error: 'Failed to parse user' };
+    }
+    
+    const data = {
+      token: token,
+      user: user,
+      allLocalStorage: { ...localStorage }
+    };
+    
+    output.textContent = JSON.stringify(data, null, 2);
+  </script>
+</body>
+</html>
