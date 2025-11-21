@@ -16,8 +16,8 @@ export default function Eventos({ onNavigate }) {
   const {
     items, total, page, setPage, pageSize, loading, error
   } = usePaginatedData({
-    mode: "local",         // depois troque pra "remote"
-    localData: eventsData, // <- mock
+    mode: "local",
+    localData: eventsData,
     pageSize: 6,
   });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
   Table,
@@ -7,6 +7,7 @@ import {
   LogOut,
   Menu,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { logout } from '../services/auth';
 
@@ -40,6 +41,7 @@ const PROFILE_BY_TYPE = {
 export default function Sidebar({ currentPath, onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const user =
     (typeof window !== 'undefined' &&
@@ -64,9 +66,18 @@ export default function Sidebar({ currentPath, onNavigate }) {
     if (isMobile) setIsOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
     logout();
+    setShowLogoutModal(false);
     onNavigate('/login');
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
   };
 
   let menuPrincipal = [];
@@ -138,7 +149,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
             ))}
 
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-muted hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 focus-ring mt-2"
             >
               <LogOut size={20} />
@@ -153,6 +164,58 @@ export default function Sidebar({ currentPath, onNavigate }) {
   if (isMobile) {
     return (
       <>
+        <AnimatePresence>
+          {showLogoutModal && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={cancelLogout}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="glass p-6 rounded-2xl w-full max-w-md"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-danger/20 flex items-center justify-center">
+                    <AlertTriangle className="text-danger" size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold text-text mb-2">
+                      Confirmar Saída
+                    </h2>
+                    <p className="text-muted mb-6">
+                      Tem certeza que deseja sair da aplicação?
+                    </p>
+                    
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={cancelLogout}
+                        className="btn-secondary px-4 py-2"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={confirmLogout}
+                        className="bg-danger hover:bg-danger/80 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                      >
+                        Sim, Sair
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <button
           onClick={toggleSidebar}
           className="fixed top-4 left-4 z-50 glass p-2 text-text hover:text-primary transition-colors focus-ring"
@@ -182,8 +245,62 @@ export default function Sidebar({ currentPath, onNavigate }) {
   }
 
   return (
-    <div className="fixed left-0 top-0 w-80 h-full glass-panel z-30">
-      {sidebarContent}
-    </div>
+    <>
+      <AnimatePresence>
+        {showLogoutModal && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={cancelLogout}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="glass p-6 rounded-2xl w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-danger/20 flex items-center justify-center">
+                  <AlertTriangle className="text-danger" size={24} />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold text-text mb-2">
+                    Confirmar Saída
+                  </h2>
+                  <p className="text-muted mb-6">
+                    Tem certeza que deseja sair da aplicação?
+                  </p>
+                  
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={cancelLogout}
+                      className="btn-secondary px-4 py-2"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={confirmLogout}
+                      className="bg-danger hover:bg-danger/80 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                    >
+                      Sim, Sair
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="fixed left-0 top-0 w-80 h-full glass-panel z-30">
+        {sidebarContent}
+      </div>
+    </>
   );
 }

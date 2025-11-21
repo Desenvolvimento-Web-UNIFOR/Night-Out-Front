@@ -1,12 +1,11 @@
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Phone, Mail, Users, MessageSquare, Building } from 'lucide-react';
+import { MapPin, Phone, Mail, Users, MessageSquare, Building, Camera } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { getCurrentUser, authFetch } from '../services/auth';
 
 const profileData = {
-  name: "Ana Silva",
-  email: "ana@nightout.com",
-  avatar: "https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=150&h=150&fit=crop&crop=face&auto=format",
-  bio: "Gerente de eventos especializada em noite e entretenimento. Apaixonada por criar experiências únicas.",
+  bio: "Profissional dedicado com vasta experiência no mercado de eventos e entretenimento noturno. Especializado em coordenação de grandes produções, gerenciamento de equipes e criação de experiências memoráveis que conectam pessoas e transformam noites comuns em momentos inesquecíveis.",
   phone: "(11) 99999-9999",
   location: "São Paulo, SP",
   followers: "12.5K",
@@ -27,6 +26,96 @@ const sparklineData = [
 const COLORS = ['#2D6BFF', '#00B3FF', '#8B5CF6'];
 
 export default function Perfil() {
+  const [user, setUser] = useState(null);
+  const [userDetails, setUserDetails] = useState(null);
+  const [avatar, setAvatar] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+    const savedAvatar = localStorage.getItem(`avatar_${currentUser.id}`);
+    if (savedAvatar) {
+      setAvatar(savedAvatar);
+    }
+
+    if (currentUser?.id && currentUser?.role) {
+      fetchUserDetails(currentUser);
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchUserDetails = async (currentUser) => {
+    setLoading(true);
+    try {
+      let endpoint = '';
+      const userType = currentUser.role?.toUpperCase();
+      
+      if (userType === 'ADMINISTRADOR' || userType === 'ADMIN' || userType === 'SUPER_ADMIN') {
+        endpoint = `/adm/${currentUser.id}`;
+      } else if (userType === 'ARTISTA') {
+        endpoint = `/artista/${currentUser.id}`;
+      } else if (userType === 'CASASHOW') {
+        endpoint = `/casaDeShow/${currentUser.id}`;
+      } else if (userType === 'CLIENTE') {
+        endpoint = `/cliente/${currentUser.id}`;
+      }
+
+      if (endpoint) {
+        const data = await authFetch(endpoint);
+        console.log('User details fetched:', data);
+        setUserDetails(data);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar detalhes do usuário:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione uma imagem válida.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result;
+        setAvatar(base64String);
+        localStorage.setItem(`avatar_${user.id}`, base64String);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Erro ao fazer upload da foto:', err);
+      alert('Erro ao fazer upload da foto. Tente novamente.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const displayAvatar = avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=150&h=150&fit=crop&crop=face&auto=format';
+  const displayName = user?.name || user?.nome || 'Usuário';
+  const displayEmail = user?.email || 'email@nightout.com';
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -36,16 +125,38 @@ export default function Perfil() {
         className="glass p-8"
       >
         <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-8">
-          <motion.img
-            whileHover={{ scale: 1.05 }}
-            src={profileData.avatar}
-            alt={profileData.name}
-            className="w-32 h-32 rounded-full object-cover glow-primary"
-          />
+          <div className="relative">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              onClick={handleAvatarClick}
+              className="relative cursor-pointer group"
+            >
+              <img
+                src={displayAvatar}
+                alt={displayName}
+                className="w-32 h-32 rounded-full object-cover glow-primary"
+              />
+              <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera size={32} className="text-white" />
+              </div>
+              {uploading && (
+                <div className="absolute inset-0 bg-black/70 rounded-full flex items-center justify-center">
+                  <div className="spinner"></div>
+                </div>
+              )}
+            </motion.div>
+          </div>
           
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-text mb-2">{profileData.name}</h1>
-            <p className="text-muted mb-4">{profileData.email}</p>
+            <h1 className="text-3xl font-bold text-text mb-2">{displayName}</h1>
+            <p className="text-muted mb-4">{displayEmail}</p>
             
             <div className="flex flex-wrap gap-6 mb-4">
               <div className="text-center">
@@ -70,106 +181,174 @@ export default function Perfil() {
         className="glass p-6 text-center"
       >
         <h2 className="text-2xl font-bold text-text mb-2">Bem vindo de volta!</h2>
-        <p className="text-muted">Você tem 5 novos eventos para revisar hoje</p>
+        <p className="text-muted">Aproveite para gerenciar seus eventos e criar experiências incríveis para o seu público</p>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="glass p-6"
-        >
-          <h3 className="text-lg font-semibold text-text mb-6">Informações do Perfil</h3>
-          
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <Phone size={18} className="text-muted" />
-              <div>
-                <p className="text-sm text-muted">Telefone</p>
-                <p className="text-text">{profileData.phone}</p>
-              </div>
-            </div>
-            
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="glass p-6"
+      >
+        <h3 className="text-lg font-semibold text-text mb-6">Informações do Perfil</h3>
+        
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="spinner mx-auto mb-4"></div>
+            <p className="text-muted">Carregando informações…</p>
+          </div>
+        ) : userDetails ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-center space-x-3">
               <Mail size={18} className="text-muted" />
               <div>
                 <p className="text-sm text-muted">Email</p>
-                <p className="text-text">{profileData.email}</p>
+                <p className="text-text">{userDetails.usuario?.email || displayEmail}</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
-              <MapPin size={18} className="text-muted" />
+              <Phone size={18} className="text-muted" />
               <div>
-                <p className="text-sm text-muted">Localização</p>
-                <p className="text-text">{profileData.location}</p>
+                <p className="text-sm text-muted">Telefone</p>
+                <p className="text-text">{userDetails.usuario?.telefone || '-'}</p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <Users size={18} className="text-muted" />
-              <div>
-                <p className="text-sm text-muted">Conexões</p>
-                <p className="text-text">250+ profissionais</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="glass p-6"
-        >
-          <h3 className="text-lg font-semibold text-text mb-6">Informações de Vendas</h3>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <ResponsiveContainer width="100%" height={120}>
-                <PieChart>
-                  <Pie
-                    data={salesData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={30}
-                    outerRadius={50}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {salesData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-text">R$ 45K</p>
-                <p className="text-muted text-sm">Total de Vendas</p>
+            {userDetails.cargo && (
+              <div className="flex items-center space-x-3">
+                <Users size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Cargo</p>
+                  <p className="text-text">{userDetails.cargo}</p>
+                </div>
               </div>
-            </div>
-            
-            <div>
-              <ResponsiveContainer width="100%" height={60}>
-                <LineChart data={sparklineData}>
-                  <Line 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#2D6BFF" 
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              <div className="mt-4">
-                <p className="text-2xl font-bold text-success">+15%</p>
-                <p className="text-muted text-sm">vs mês anterior</p>
+            )}
+
+            {userDetails.permissao_nivel && (
+              <div className="flex items-center space-x-3">
+                <Users size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Nível de Permissão</p>
+                  <p className="text-text">{userDetails.permissao_nivel}</p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {userDetails.nome_artista && (
+              <div className="flex items-center space-x-3">
+                <Users size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Nome Artístico</p>
+                  <p className="text-text">{userDetails.nome_artista}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.genero_musical && (
+              <div className="flex items-center space-x-3">
+                <Users size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Gênero Musical</p>
+                  <p className="text-text">{userDetails.genero_musical}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.cache_min && (
+              <div className="flex items-center space-x-3">
+                <Users size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Cachê Mínimo</p>
+                  <p className="text-text">R$ {userDetails.cache_min}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.nome_fantasia && (
+              <div className="flex items-center space-x-3">
+                <Building size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Nome Fantasia</p>
+                  <p className="text-text">{userDetails.nome_fantasia}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.cnpj && (
+              <div className="flex items-center space-x-3">
+                <Building size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">CNPJ</p>
+                  <p className="text-text">{userDetails.cnpj}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.capacidade && (
+              <div className="flex items-center space-x-3">
+                <Users size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Capacidade</p>
+                  <p className="text-text">{userDetails.capacidade} pessoas</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.endereco && (
+              <div className="flex items-center space-x-3">
+                <MapPin size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Endereço</p>
+                  <p className="text-text">{userDetails.endereco}, {userDetails.bairro}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.estado && (
+              <div className="flex items-center space-x-3">
+                <MapPin size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Estado</p>
+                  <p className="text-text">{userDetails.estado}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.cep && (
+              <div className="flex items-center space-x-3">
+                <MapPin size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">CEP</p>
+                  <p className="text-text">{userDetails.cep}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.apelido && (
+              <div className="flex items-center space-x-3">
+                <Users size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Apelido</p>
+                  <p className="text-text">{userDetails.apelido}</p>
+                </div>
+              </div>
+            )}
+
+            {userDetails.data_nascimento && (
+              <div className="flex items-center space-x-3">
+                <Users size={18} className="text-muted" />
+                <div>
+                  <p className="text-sm text-muted">Data de Nascimento</p>
+                  <p className="text-text">{new Date(userDetails.data_nascimento).toLocaleDateString('pt-BR')}</p>
+                </div>
+              </div>
+            )}
           </div>
-        </motion.div>
-      </div>
+        ) : (
+          <p className="text-center text-muted py-8">Nenhuma informação disponível.</p>
+        )}
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

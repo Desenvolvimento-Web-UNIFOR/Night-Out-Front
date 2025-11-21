@@ -1,4 +1,3 @@
-// src/Login.jsx
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Facebook } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';

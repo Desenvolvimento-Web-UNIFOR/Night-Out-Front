@@ -2,7 +2,7 @@ import { Building, Calendar } from 'lucide-react';
 
 const tabsConfig = {
   '/': [{ id: 'overview', label: 'Visão Geral', active: true }],
-  '/admin': [{ id: 'overview', label: 'Visão Geral', active: true }], // ← novo
+  '/admin': [{ id: 'overview', label: 'Visão Geral', active: true }],
   '/estabelecimentos': [{ id: 'establishments', label: 'Estabelecimentos', active: true }],
   '/eventos': [{ id: 'events', label: 'Eventos', active: true }],
 };
