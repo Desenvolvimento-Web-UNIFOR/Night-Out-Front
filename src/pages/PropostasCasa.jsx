@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X, Filter } from 'lucide-react';
 import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
 import { authFetch } from '../services/auth';
@@ -252,6 +252,14 @@ export default function PropostasCasa() {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
 
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [columns, setColumns] = useState({
+    dataProposta: true,
+    dataEvento: true,
+    valorOfertado: true,
+    status: true,
+  });
+
   async function loadPropostas() {
     setLoading(true);
     setErr('');
@@ -365,7 +373,7 @@ export default function PropostasCasa() {
               />
               <input
                 type="text"
-                placeholder="Buscar por artista, evento ou status..."
+                placeholder="Buscar por data, valor ou status..."
                 className="pl-10 pr-4 py-2 bg-panel border border-border rounded-lg text-text placeholder-muted focus-ring w-72"
                 value={search}
                 onChange={(e) => {
@@ -373,6 +381,86 @@ export default function PropostasCasa() {
                   setSearch(e.target.value);
                 }}
               />
+            </div>
+
+            <div className="relative">
+              <button
+                className="flex items-center space-x-2 btn-secondary"
+                onClick={() => setFilterMenuOpen((prev) => !prev)}
+              >
+                <Filter size={16} />
+                <span>Filtros</span>
+              </button>
+              {filterMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 glass border border-border rounded-xl shadow-lg z-30 p-3">
+                  <p className="text-sm text-muted mb-2 font-medium">
+                    Exibir colunas:
+                  </p>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 cursor-pointer hover:bg-panel/50 p-2 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={columns.dataProposta}
+                        onChange={(e) =>
+                          setColumns((prev) => ({
+                            ...prev,
+                            dataProposta: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 rounded border-border bg-panel"
+                      />
+                      <span className="text-sm text-text">Data Proposta</span>
+                    </label>
+
+                    <label className="flex items-center space-x-2 cursor-pointer hover:bg-panel/50 p-2 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={columns.dataEvento}
+                        onChange={(e) =>
+                          setColumns((prev) => ({
+                            ...prev,
+                            dataEvento: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 rounded border-border bg-panel"
+                      />
+                      <span className="text-sm text-text">Data Evento</span>
+                    </label>
+
+                    <label className="flex items-center space-x-2 cursor-pointer hover:bg-panel/50 p-2 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={columns.valorOfertado}
+                        onChange={(e) =>
+                          setColumns((prev) => ({
+                            ...prev,
+                            valorOfertado: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 rounded border-border bg-panel"
+                      />
+                      <span className="text-sm text-text">
+                        Valor Ofertado
+                      </span>
+                    </label>
+
+                    <label className="flex items-center space-x-2 cursor-pointer hover:bg-panel/50 p-2 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={columns.status}
+                        onChange={(e) =>
+                          setColumns((prev) => ({
+                            ...prev,
+                            status: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 rounded border-border bg-panel"
+                      />
+                      <span className="text-sm text-text">Status</span>
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -389,30 +477,26 @@ export default function PropostasCasa() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-4 px-6 text-muted font-medium">
-                    ID Proposta
-                  </th>
-                  <th className="text-left py-4 px-6 text-muted font-medium">
-                    ID Artista
-                  </th>
-                  <th className="text-left py-4 px-6 text-muted font-medium">
-                    ID Evento
-                  </th>
-                  <th className="text-left py-4 px-6 text-muted font-medium">
-                    Data Proposta
-                  </th>
-                  <th className="text-left py-4 px-6 text-muted font-medium">
-                    Data Evento
-                  </th>
-                  <th className="text-left py-4 px-6 text-muted font-medium">
-                    Valor Ofertado
-                  </th>
-                  <th className="text-left py-4 px-6 text-muted font-medium">
-                    Status
-                  </th>
-                  <th className="text-left py-4 px-6 text-muted font-medium">
-                    Termos
-                  </th>
+                  {columns.dataProposta && (
+                    <th className="text-left py-4 px-6 text-muted font-medium">
+                      Data Proposta
+                    </th>
+                  )}
+                  {columns.dataEvento && (
+                    <th className="text-left py-4 px-6 text-muted font-medium">
+                      Data Evento
+                    </th>
+                  )}
+                  {columns.valorOfertado && (
+                    <th className="text-left py-4 px-6 text-muted font-medium">
+                      Valor Ofertado
+                    </th>
+                  )}
+                  {columns.status && (
+                    <th className="text-left py-4 px-6 text-muted font-medium">
+                      Status
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -427,46 +511,40 @@ export default function PropostasCasa() {
                     transition={{ duration: 0.4, delay: index * 0.05 }}
                     className="border-b border-border hover:bg-panel/30 transition-colors"
                   >
-                    <td className="py-4 px-6 text-text">
-                      {p.id_proposta_casa || '-'}
-                    </td>
-                    <td className="py-4 px-6 text-muted">
-                      {p.id_artista || '-'}
-                    </td>
-                    <td className="py-4 px-6 text-muted">
-                      {p.id_evento || '-'}
-                    </td>
-                    <td className="py-4 px-6 text-muted">
-                      {formatDate(p.data_proposta)}
-                    </td>
-                    <td className="py-4 px-6 text-muted">
-                      {formatDate(p.data_evento)}
-                    </td>
-                    <td className="py-4 px-6 text-text font-medium">
-                      {formatCurrency(p.valor_ofertado)}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          String(p.status || '')
-                            .toUpperCase()
-                            .includes('ACEITA')
-                            ? 'bg-emerald-500/15 text-emerald-400'
-                            : String(p.status || '')
-                                .toUpperCase()
-                                .includes('RECUS')
-                            ? 'bg-red-500/15 text-red-400'
-                            : 'bg-primary/15 text-primary'
-                        }`}
-                      >
-                        {p.status || 'DISPONÍVEL'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-muted max-w-xs">
-                      <div className="truncate" title={p.termos || ''}>
-                        {p.termos || '-'}
-                      </div>
-                    </td>
+                    {columns.dataProposta && (
+                      <td className="py-4 px-6 text-muted">
+                        {formatDate(p.data_proposta)}
+                      </td>
+                    )}
+                    {columns.dataEvento && (
+                      <td className="py-4 px-6 text-muted">
+                        {formatDate(p.data_evento)}
+                      </td>
+                    )}
+                    {columns.valorOfertado && (
+                      <td className="py-4 px-6 text-text font-medium">
+                        {formatCurrency(p.valor_ofertado)}
+                      </td>
+                    )}
+                    {columns.status && (
+                      <td className="py-4 px-6">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            String(p.status || '')
+                              .toUpperCase()
+                              .includes('ACEITA')
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : String(p.status || '')
+                                  .toUpperCase()
+                                  .includes('RECUS')
+                              ? 'bg-red-500/15 text-red-400'
+                              : 'bg-primary/15 text-primary'
+                          }`}
+                        >
+                          {p.status || 'DISPONÍVEL'}
+                        </span>
+                      </td>
+                    )}
                   </motion.tr>
                 ))}
               </tbody>
