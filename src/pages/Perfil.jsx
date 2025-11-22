@@ -1,29 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Phone, Mail, Users, MessageSquare, Building, Camera } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { getCurrentUser, authFetch } from '../services/auth';
-
-const profileData = {
-  bio: "Profissional dedicado com vasta experiência no mercado de eventos e entretenimento noturno. Especializado em coordenação de grandes produções, gerenciamento de equipes e criação de experiências memoráveis que conectam pessoas e transformam noites comuns em momentos inesquecíveis.",
-  phone: "(11) 99999-9999",
-  location: "São Paulo, SP",
-  followers: "12.5K",
-  following: "892"
-};
-
-const salesData = [
-  { name: 'Eventos', value: 45 },
-  { name: 'Bar', value: 30 },
-  { name: 'VIP', value: 25 }
-];
-
-const sparklineData = [
-  { value: 10 }, { value: 25 }, { value: 15 }, { value: 35 }, 
-  { value: 30 }, { value: 45 }, { value: 40 }, { value: 55 }
-];
-
-const COLORS = ['#2D6BFF', '#00B3FF', '#8B5CF6'];
 
 export default function Perfil() {
   const [user, setUser] = useState(null);
@@ -35,7 +13,13 @@ export default function Perfil() {
 
   useEffect(() => {
     const currentUser = getCurrentUser();
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
+
     setUser(currentUser);
+
     const savedAvatar = localStorage.getItem(`avatar_${currentUser.id}`);
     if (savedAvatar) {
       setAvatar(savedAvatar);
@@ -53,7 +37,7 @@ export default function Perfil() {
     try {
       let endpoint = '';
       const userType = currentUser.role?.toUpperCase();
-      
+
       if (userType === 'ADMINISTRADOR' || userType === 'ADMIN' || userType === 'SUPER_ADMIN') {
         endpoint = `/adm/${currentUser.id}`;
       } else if (userType === 'ARTISTA') {
@@ -101,7 +85,9 @@ export default function Perfil() {
       reader.onloadend = () => {
         const base64String = reader.result;
         setAvatar(base64String);
-        localStorage.setItem(`avatar_${user.id}`, base64String);
+        if (user?.id) {
+          localStorage.setItem(`avatar_${user.id}`, base64String);
+        }
       };
       reader.readAsDataURL(file);
     } catch (err) {
@@ -112,9 +98,42 @@ export default function Perfil() {
     }
   };
 
-  const displayAvatar = avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=150&h=150&fit=crop&crop=face&auto=format';
-  const displayName = user?.name || user?.nome || 'Usuário';
-  const displayEmail = user?.email || 'email@nightout.com';
+  const primaryUsuario = Array.isArray(userDetails?.usuario)
+    ? userDetails.usuario[0]
+    : userDetails?.usuario;
+
+  const displayName =
+    userDetails?.nome_fantasia ||
+    primaryUsuario?.nome ||
+    user?.name ||
+    user?.nome ||
+    'Usuário';
+
+  const displayEmail =
+    primaryUsuario?.email ||
+    user?.email ||
+    'email@nightout.com';
+
+  const displayBio = userDetails
+    ? (() => {
+        const partesLocal = [
+          userDetails.endereco,
+          userDetails.bairro,
+          userDetails.estado
+        ].filter(Boolean);
+
+        const localStr = partesLocal.length ? ` localizada em ${partesLocal.join(', ')}` : '';
+        const capStr = userDetails.capacidade
+          ? `. Capacidade para ${userDetails.capacidade} pessoas.`
+          : '';
+
+        return `Casa de show ${userDetails.nome_fantasia || ''}${localStr}${capStr}`;
+      })()
+    : 'Complete os dados da sua casa de show para exibirmos mais informações aqui.';
+
+  const displayAvatar =
+    avatar ||
+    'https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=150&h=150&fit=crop&crop=face&auto=format';
 
   return (
     <div className="space-y-6">
@@ -153,23 +172,23 @@ export default function Perfil() {
               )}
             </motion.div>
           </div>
-          
+
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-text mb-2">{displayName}</h1>
             <p className="text-muted mb-4">{displayEmail}</p>
-            
+
             <div className="flex flex-wrap gap-6 mb-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{profileData.followers}</p>
-                <p className="text-muted text-sm">Seguidores</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary2">{profileData.following}</p>
-                <p className="text-muted text-sm">Seguindo</p>
+                <p className="text-2xl font-bold text-primary">
+                  {userDetails?.capacidade ?? '-'}
+                </p>
+                <p className="text-muted text-sm">Capacidade</p>
               </div>
             </div>
-            
-            <p className="text-muted leading-relaxed max-w-2xl">{profileData.bio}</p>
+
+            <p className="text-muted leading-relaxed max-w-2xl">
+              {displayBio}
+            </p>
           </div>
         </div>
       </motion.div>
@@ -181,7 +200,9 @@ export default function Perfil() {
         className="glass p-6 text-center"
       >
         <h2 className="text-2xl font-bold text-text mb-2">Bem vindo de volta!</h2>
-        <p className="text-muted">Aproveite para gerenciar seus eventos e criar experiências incríveis para o seu público</p>
+        <p className="text-muted">
+          Aproveite para gerenciar seus eventos e criar experiências incríveis para o seu público
+        </p>
       </motion.div>
 
       <motion.div
@@ -191,7 +212,7 @@ export default function Perfil() {
         className="glass p-6"
       >
         <h3 className="text-lg font-semibold text-text mb-6">Informações do Perfil</h3>
-        
+
         {loading ? (
           <div className="text-center py-8">
             <div className="spinner mx-auto mb-4"></div>
@@ -203,15 +224,19 @@ export default function Perfil() {
               <Mail size={18} className="text-muted" />
               <div>
                 <p className="text-sm text-muted">Email</p>
-                <p className="text-text">{userDetails.usuario?.email || displayEmail}</p>
+                <p className="text-text">
+                  {primaryUsuario?.email || displayEmail}
+                </p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <Phone size={18} className="text-muted" />
               <div>
                 <p className="text-sm text-muted">Telefone</p>
-                <p className="text-text">{userDetails.usuario?.telefone || '-'}</p>
+                <p className="text-text">
+                  {primaryUsuario?.telefone || userDetails.usuario?.telefone || '-'}
+                </p>
               </div>
             </div>
 
@@ -300,7 +325,10 @@ export default function Perfil() {
                 <MapPin size={18} className="text-muted" />
                 <div>
                   <p className="text-sm text-muted">Endereço</p>
-                  <p className="text-text">{userDetails.endereco}, {userDetails.bairro}</p>
+                  <p className="text-text">
+                    {userDetails.endereco}
+                    {userDetails.bairro ? `, ${userDetails.bairro}` : ''}
+                  </p>
                 </div>
               </div>
             )}
@@ -340,41 +368,45 @@ export default function Perfil() {
                 <Users size={18} className="text-muted" />
                 <div>
                   <p className="text-sm text-muted">Data de Nascimento</p>
-                  <p className="text-text">{new Date(userDetails.data_nascimento).toLocaleDateString('pt-BR')}</p>
+                  <p className="text-text">
+                    {new Date(userDetails.data_nascimento).toLocaleDateString('pt-BR')}
+                  </p>
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <p className="text-center text-muted py-8">Nenhuma informação disponível.</p>
+          <p className="text-center text-muted py-8">
+            Nenhuma informação disponível.
+          </p>
         )}
       </motion.div>
 
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.4 }}
         className="glass p-6"
       >
         <h3 className="text-lg font-semibold text-text mb-6">Estabelecimentos / Mensagens</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { 
-              icon: Building, 
-              title: "Bulls Beer", 
+            {
+              icon: Building,
+              title: "Bulls Beer",
               subtitle: "3 eventos ativos",
               color: "text-primary"
             },
-            { 
-              icon: MessageSquare, 
-              title: "12 Mensagens", 
+            {
+              icon: MessageSquare,
+              title: "12 Mensagens",
               subtitle: "5 não lidas",
               color: "text-primary2"
             },
-            { 
-              icon: Users, 
-              title: "Equipe", 
+            {
+              icon: Users,
+              title: "Equipe",
               subtitle: "8 membros online",
               color: "text-accent"
             }
@@ -396,7 +428,7 @@ export default function Perfil() {
             </motion.div>
           ))}
         </div>
-      </motion.div>
+      </motion.div> */}
     </div>
   );
 }
