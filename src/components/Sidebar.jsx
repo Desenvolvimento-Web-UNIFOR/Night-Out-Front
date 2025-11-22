@@ -81,17 +81,40 @@ export default function Sidebar({ currentPath, onNavigate }) {
   };
 
   let menuPrincipal = [];
-  let conta = [];
+  let conta = [{ icon: User, label: 'Perfil', path: profilePath }];
 
-  if (userType === 'CLIENTE' || userType === 'ARTISTA') {
-    menuPrincipal = [{ icon: Home, label: 'Painel', path: homePath }];
-    conta = [{ icon: User, label: 'Perfil', path: profilePath }];
-  } else {
-    menuPrincipal = [
-      { icon: Home, label: 'Painel', path: homePath },
-      { icon: Table, label: 'Tabelas', path: '/tabelas' },
-    ];
-    conta = [{ icon: User, label: 'Perfil', path: profilePath }];
+  switch (userType) {
+    case 'CLIENTE':
+      menuPrincipal = [
+        { icon: Home, label: 'Painel', path: homePath },
+      ];
+      break;
+
+    case 'ARTISTA':
+      menuPrincipal = [
+        { icon: Home, label: 'Painel', path: homePath },
+        // { icon: Table, label: 'Propostas', path: '/propostas' },
+      ];
+      break;
+
+    case 'CASASHOW':
+      menuPrincipal = [
+        { icon: Home, label: 'Painel', path: homePath },
+        { icon: Table, label: 'Propostas', path: '/propostas' },
+      ];
+      break;
+
+    case 'ADMINISTRADOR':
+      menuPrincipal = [
+        { icon: Home, label: 'Painel', path: homePath },
+        { icon: Table, label: 'Tabelas', path: '/tabelas' },
+      ];
+      break;
+
+    default:
+      menuPrincipal = [
+        { icon: Home, label: 'Painel', path: homePath },
+      ];
   }
 
   const sidebarContent = (

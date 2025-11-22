@@ -63,7 +63,7 @@ export default function PerfilArtista() {
       setErr('');
 
       try {
-        const data = await authFetch(`/artistas/${userPayload.id}`, {
+        const data = await authFetch(`/artista/${userPayload.id}`, {
           method: 'GET',
         });
         setArtist(data);
