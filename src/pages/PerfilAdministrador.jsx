@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Phone, Briefcase, Shield, Camera, Edit } from 'lucide-react';
+import { Mail, Phone, Briefcase, Shield, Camera } from 'lucide-react';
 import { getCurrentUser, authFetch } from '../services/auth';
 
 export default function PerfilAdministrador() {
@@ -77,8 +77,11 @@ export default function PerfilAdministrador() {
   };
 
   const displayAvatar = avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=150&h=150&fit=crop&crop=face&auto=format';
-  const displayName = user?.name || userDetails?.usuario?.nome || 'Administrador';
-  const displayEmail = user?.email || userDetails?.usuario?.email || 'email@nightout.com';
+  const displayName = userDetails?.nome || user?.name || 'Administrador';
+  const displayEmail = userDetails?.email || user?.email || 'email@nightout.com';
+  const displayTelefone = userDetails?.telefone || 'Não informado';
+  const displayCargo = userDetails?.cargo || 'Não informado';
+  const displayPermissao = userDetails?.permissao_nivel || 'Não informado';
 
   if (loading) {
     return (
@@ -139,11 +142,6 @@ export default function PerfilAdministrador() {
               )}
             </div>
           </div>
-
-          <button className="btn-primary px-6 py-3 flex items-center gap-2">
-            <Edit size={20} />
-            Editar Perfil
-          </button>
         </div>
       </motion.div>
 
@@ -168,7 +166,7 @@ export default function PerfilAdministrador() {
               <Phone className="text-primary mt-1" size={20} />
               <div>
                 <p className="text-sm text-muted">Telefone</p>
-                <p className="text-text">{userDetails?.usuario?.telefone || 'Não informado'}</p>
+                <p className="text-text">{displayTelefone}</p>
               </div>
             </div>
 
@@ -176,7 +174,7 @@ export default function PerfilAdministrador() {
               <Briefcase className="text-primary mt-1" size={20} />
               <div>
                 <p className="text-sm text-muted">Cargo</p>
-                <p className="text-text">{userDetails?.cargo || 'Não informado'}</p>
+                <p className="text-text">{displayCargo}</p>
               </div>
             </div>
 
@@ -184,7 +182,7 @@ export default function PerfilAdministrador() {
               <Shield className="text-primary mt-1" size={20} />
               <div>
                 <p className="text-sm text-muted">Nível de Permissão</p>
-                <p className="text-text">{userDetails?.permissao_nivel || 'Não informado'}</p>
+                <p className="text-text">{displayPermissao}</p>
               </div>
             </div>
           </div>

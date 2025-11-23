@@ -102,8 +102,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
     case 'CASASHOW':
       menuPrincipal = [
         { icon: Home, label: 'Painel', path: homePath },
-        { icon: Table, label: 'Propostas', path: '/propostas' },
-        { icon: PlusCircle, label: 'Criar evento', path: '/novo-evento' },
+        { icon: PlusCircle, label: 'Eventos', path: '/novo-evento' },
       ];
       break;
 

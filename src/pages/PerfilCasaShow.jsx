@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Phone, Building, MapPin, Users, Camera, Edit, FileText } from 'lucide-react';
+import { Mail, Phone, Building, MapPin, Users, Camera, FileText } from 'lucide-react';
 import { getCurrentUser, authFetch } from '../services/auth';
 
 export default function PerfilCasaShow() {
@@ -137,11 +137,6 @@ export default function PerfilCasaShow() {
               </span>
             </div>
           </div>
-
-          <button className="btn-primary px-6 py-3 flex items-center gap-2">
-            <Edit size={20} />
-            Editar Perfil
-          </button>
         </div>
       </motion.div>
 
