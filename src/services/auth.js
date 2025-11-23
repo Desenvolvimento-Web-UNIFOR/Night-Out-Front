@@ -1,9 +1,12 @@
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export async function login({ email, password }) {
   const res = await fetch(`${BASE_URL}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      "x-api-key": import.meta.env.VITE_X_API_KEY || "",
+    },
     body: JSON.stringify({ email, senha: password }),
   });
 
@@ -81,16 +84,40 @@ export function logout() {
 
 export async function authFetch(path, options = {}) {
   const token = getToken();
+  const apiKey = import.meta.env.VITE_X_API_KEY;
+  console.log('authFetch - path:', path, 'token:', token ? 'presente' : 'ausente', 'api-key:', apiKey ? 'presente' : 'ausente');
+  
+  if (!token) {
+    console.warn('authFetch: Nenhum token encontrado! Usuário pode não estar autenticado.');
+  }
+  
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+    Authorization: token ? `Bearer ${token}` : "",
+    "x-api-key": apiKey || "",
+  };
+  
+  console.log('authFetch - Headers sendo enviados:', {
+    'Content-Type': headers['Content-Type'],
+    'Authorization': token ? 'Bearer [TOKEN]' : 'AUSENTE',
+    'x-api-key': apiKey ? '[PRESENTE]' : 'AUSENTE'
+  });
+  
   const res = await fetch(
     path.startsWith("http") ? path : `${BASE_URL}${path}`,
     {
       ...options,
-      headers: {
-        ...(options.headers || {}),
-        Authorization: token ? `Bearer ${token}` : "",
-      },
+      headers,
     }
   );
+
+  console.log('authFetch response:', {
+    path,
+    status: res.status,
+    statusText: res.statusText,
+    ok: res.ok
+  });
 
   if (!res.ok) {
     let message = "Erro na requisição.";

@@ -1,87 +1,201 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Ticket, ArrowRight } from 'lucide-react';
-import { eventsData } from '../data/mocks';
+import { MapPin, Clock, Ticket, ChevronRight } from 'lucide-react';
 import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
+import { authFetch } from '../services/auth';
 
-// eslint-disable-next-line react/prop-types
+const EVENT_COVERS = [
+  'https://images.unsplash.com/photo-1514517521153-1be72277b32e?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1512427691650-1e0c2f9a81b3?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1518976024611-28bf4b48222e?auto=format&fit=crop&w=800&q=80',
+];
+
 export default function Eventos({ onNavigate }) {
+  const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [errorEvents, setErrorEvents] = useState('');
+
   useEffect(() => {
-    if (Array.isArray(eventsData)) {
-      window.__EVENTS__ = eventsData;
+    async function loadEvents() {
+      setLoadingEvents(true);
+      setErrorEvents('');
+
+      try {
+        const data = await authFetch('/evento?page=1&pageSize=200', {
+          method: 'GET',
+        });
+
+        const rawEvents = Array.isArray(data) ? data : data?.eventos || [];
+
+        const mapped = rawEvents.map((ev, index) => {
+          const start = ev.data_inicio ? new Date(ev.data_inicio) : null;
+
+          const dateLabel = start
+            ? start.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'short',
+              })
+            : '';
+
+          const timeLabel = start
+            ? start.toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '';
+
+          return {
+            id: ev.id_evento,
+            title: ev.titulo,
+            description: ev.descricao,
+            date: dateLabel,
+            time: timeLabel,
+            place: ev.local || 'Local a definir',
+            price: 'A combinar',
+            image: EVENT_COVERS[index % EVENT_COVERS.length],
+          };
+        });
+
+        setEvents(mapped);
+        window.__EVENTS__ = mapped;
+      } catch (e) {
+        console.error('Erro ao carregar eventos:', e);
+        setErrorEvents(e?.message || 'Falha ao carregar eventos.');
+      } finally {
+        setLoadingEvents(false);
+      }
     }
+
+    loadEvents();
   }, []);
 
   const {
-    items, total, page, setPage, pageSize, loading, error
+    items,
+    page,
+    pageSize,
+    total,
+    setPage,
   } = usePaginatedData({
-    mode: "local",
-    localData: eventsData,
+    mode: 'local',
+    localData: events,
     pageSize: 6,
   });
 
+  const handleViewDetails = (id) => {
+    if (onNavigate) {
+      onNavigate(`/event/${id}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="glass p-6">
-        <h2 className="text-2xl font-bold text-text mb-2">Eventos</h2>
-        <p className="text-muted">Os melhores eventos da cidade te esperam</p>
-      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="glass p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-text">Eventos disponíveis</h1>
+            <p className="text-muted">
+              Veja todos os eventos publicados pelas casas de show na plataforma.
+            </p>
+          </div>
+        </div>
 
-      {error && <div className="glass p-4 text-danger border border-danger/30">Erro: {error}</div>}
-      {loading && <div className="glass p-4">Carregando…</div>}
+        {loadingEvents ? (
+          <div className="py-16 text-center text-muted">
+            <div className="spinner mx-auto mb-4" />
+            Carregando eventos…
+          </div>
+        ) : errorEvents ? (
+          <div className="py-8 text-center text-red-300 text-sm">
+            {errorEvents}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="py-16 text-center text-muted">
+            Nenhum evento disponível no momento.
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {items.map((event, index) => (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="glass overflow-hidden flex flex-col"
+                >
+                  <div className="relative h-40">
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-      <div className="space-y-6">
-        {items.map((event, index) => (
-          <motion.div
-            key={event.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: index * 0.05 }}
-            whileHover={{ scale: 1.01, y: -2 }}
-            className="glass p-6 hover:glow-primary transition-all duration-300"
-          >
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="relative lg:w-80 h-48 lg:h-64">
-                <img src={event.image} alt={event.title} className="w-full h-full object-cover rounded-xl" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-xl" />
-                <div className="absolute bottom-4 right-4 flex items-center space-x-2 bg-black/70 backdrop-blur-sm px-3 py-2 rounded-full">
-                  <img src={event.artist.avatar} alt={event.artist.name} className="w-8 h-8 rounded-full object-cover" />
-                  <span className="text-white text-sm font-medium">{event.artist.name}</span>
-                </div>
-                <div className="absolute top-4 left-4 bg-primary/90 backdrop-blur-sm px-4 py-2 rounded-full">
-                  <span className="text-white text-sm font-bold">{event.date}</span>
-                </div>
-              </div>
-
-              <div className="flex-1 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-2xl font-bold text-text mb-3">{event.title}</h3>
-                  <p className="text-muted text-lg mb-6 leading-relaxed">{event.description}</p>
-                  <div className="flex flex-wrap gap-4 mb-6">
-                    <div className="flex items-center text-muted"><Calendar size={16} className="mr-2" /><span>{event.date}</span></div>
-                    <div className="flex items-center text-muted"><Clock size={16} className="mr-2" /><span>22:00</span></div>
-                    <div className="flex items-center text-success"><Ticket size={16} className="mr-2" /><span className="font-semibold">{event.price}</span></div>
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <p className="text-xs text-gray-200 mb-1 flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-black/40 text-[11px]">
+                          {event.date || 'Em breve'}
+                        </span>
+                        {event.time && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-black/40 text-[11px]">
+                            {event.time}
+                          </span>
+                        )}
+                      </p>
+                      <h3 className="text-white font-semibold text-lg leading-tight">
+                        {event.title}
+                      </h3>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-end">
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => onNavigate(`/event/${event.id}`)} className="flex items-center space-x-2 btn-primary px-8 py-3 glow-primary">
-                    <span className="font-semibold">VER TUDO</span>
-                    <ArrowRight size={18} />
-                  </motion.button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={setPage}
-      />
+                  <div className="p-4 flex-1 flex flex-col">
+                    <p className="text-muted text-sm mb-3 line-clamp-2">
+                      {event.description}
+                    </p>
+
+                    <div className="space-y-2 text-sm mb-4">
+                      <div className="flex items-center gap-2 text-muted">
+                        <MapPin size={14} />
+                        <span>{event.place}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted">
+                        <Clock size={14} />
+                        <span>{event.time || 'Horário a definir'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted">
+                        <Ticket size={14} />
+                        <span>{event.price}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleViewDetails(event.id)}
+                      className="mt-auto inline-flex items-center justify-between w-full bg-primary hover:bg-primary/90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <span>Ver detalhes</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+            />
+          </>
+        )}
+      </motion.div>
     </div>
   );
 }
