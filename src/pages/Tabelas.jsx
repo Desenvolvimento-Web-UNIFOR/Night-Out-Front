@@ -1566,10 +1566,57 @@ export default function Tabelas() {
     setLoadingEmployees(true);
     setErrEmployees('');
     try {
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentToken = localStorage.getItem('token');
+      console.log('DEBUG - Usuário logado:', currentUser);
+      console.log('DEBUG - Token presente:', !!currentToken);
+      console.log('DEBUG - Role do usuário:', currentUser.role);
+      console.log('DEBUG - Token completo (copie e teste no Postman):', currentToken);
+      
+      if (currentToken) {
+        try {
+          const payload = currentToken.split('.')[1];
+          const decoded = JSON.parse(atob(payload));
+          console.log('DEBUG - JWT decodificado:', decoded);
+          
+          if (decoded.exp) {
+            const expirationDate = new Date(decoded.exp * 1000);
+            const now = new Date();
+            console.log('DEBUG - Token expira em:', expirationDate);
+            console.log('DEBUG - Data atual:', now);
+            console.log('DEBUG - Token expirado?', now > expirationDate);
+            
+            if (now > expirationDate) {
+              console.error('TOKEN EXPIRADO! Faça logout e login novamente.');
+              setErrEmployees('Sua sessão expirou. Por favor, faça login novamente.');
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Erro ao decodificar JWT:', err);
+        }
+      }
+      
+      console.log('Tentando acessar /adm/ com headers:');
+      console.log('Authorization: Bearer ' + (currentToken ? currentToken.substring(0, 20) + '...' : 'AUSENTE'));
+      console.log('x-api-key:', import.meta.env.VITE_X_API_KEY ? 'presente' : 'AUSENTE');
+      
+      console.log('Tentando primeiro sem barra final...');
+      try {
+        const listWithoutSlash = await authFetch('/adm', { method: 'GET' });
+        console.log('SUCESSO sem barra! Resultado:', listWithoutSlash);
+        const arr = Array.isArray(listWithoutSlash) ? listWithoutSlash : [];
+        setEmployees(arr);
+        return;
+      } catch {
+        console.log('Falhou sem barra, tentando com barra...');
+      }
+      
       const list = await authFetch('/adm/', { method: 'GET' });
       const arr = Array.isArray(list) ? list : [];
       setEmployees(arr);
     } catch (e) {
+      console.error('Erro ao carregar funcionários:', e);
       setErrEmployees(e?.message || 'Falha ao carregar funcionários.');
     } finally {
       setLoadingEmployees(false);

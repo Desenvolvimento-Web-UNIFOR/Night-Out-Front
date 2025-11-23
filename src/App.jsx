@@ -5,10 +5,14 @@ import Sidebar from "./components/Sidebar";
 import TopbarTabs from "./components/TopbarTabs";
 
 import Dashboard from "./pages/Dashboard";
+import DashboardAdministrador from "./pages/DashboardAdministrador";
+import DashboardCasaShow from "./pages/DashboardCasaShow";
 import Tabelas from "./pages/Tabelas";
 import Estabelecimentos from "./pages/Estabelecimentos";
 import Eventos from "./pages/Eventos";
 import Perfil from "./pages/Perfil";
+import PerfilAdministrador from "./pages/PerfilAdministrador";
+import PerfilCasaShow from "./pages/PerfilCasaShow";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import EventPage from "./pages/EventPage";
@@ -16,6 +20,8 @@ import FeedCliente from "./pages/FeedCliente";
 import DashboardArtista from "./pages/DashboardArtista";
 import PerfilArtista from "./pages/PerfilArtista";
 import PropostasCasa from "./pages/PropostasCasa";
+import Cadastro from "./pages/Cadastro";
+import NovoEvento from "./pages/NovoEvento";
 
 function getStoredUser() {
   try {
@@ -51,15 +57,15 @@ function normalizeUserType(raw) {
 const HOME_BY_TYPE = {
   CLIENTE: "/",
   ARTISTA: "/dashboard-artista",
-  ADMINISTRADOR: "/admin",
-  CASASHOW: "/admin",
+  ADMINISTRADOR: "/dashboard-admin",
+  CASASHOW: "/dashboard-casa",
 };
 
 const ALLOWED_BY_TYPE = {
   CLIENTE: new Set(["/", "/perfil", "/event/:id"]),
   ARTISTA: new Set(["/dashboard-artista", "/perfil-artista"]),
-  ADMINISTRADOR: new Set(["/admin", "/tabelas", "/perfil"]),
-  CASASHOW: new Set(["/admin", "/propostas", "/perfil"]),
+  ADMINISTRADOR: new Set(["/dashboard-admin", "/tabelas", "/cadastro", "/perfil-admin"]),
+  CASASHOW: new Set(["/dashboard-casa", "/propostas", "/perfil-casa", "/novo-evento"]),
 };
 
 const PUBLIC_PATHS = new Set(["/login", "/register"]);
@@ -67,8 +73,13 @@ const PUBLIC_PATHS = new Set(["/login", "/register"]);
 const routes = {
   "/dashboard-artista": DashboardArtista,
   "/perfil-artista": PerfilArtista,
+  "/dashboard-admin": DashboardAdministrador,
+  "/dashboard-casa": DashboardCasaShow,
+  "/perfil-admin": PerfilAdministrador,
+  "/perfil-casa": PerfilCasaShow,
   "/admin": Dashboard,
   "/tabelas": Tabelas,
+  "/cadastro": Cadastro,
   "/estabelecimentos": Estabelecimentos,
   "/eventos": Eventos,
   "/perfil": Perfil,
@@ -77,19 +88,26 @@ const routes = {
   "/event/:id": EventPage,
   "/": FeedCliente,
   "/propostas": PropostasCasa,
+  "/novo-evento": NovoEvento,
 };
 
 const layoutRoutes = [
   "/",
   "/tabelas",
+  "/cadastro",
   "/estabelecimentos",
   "/eventos",
   "/perfil",
   "/perfil-artista",
+  "/perfil-admin",
+  "/perfil-casa",
   "/dashboard-artista",
+  "/dashboard-admin",
+  "/dashboard-casa",
   "/admin",
   "/event/:id",
   "/propostas",
+  "/novo-evento",
 ];
 
 function matchRoute(path) {

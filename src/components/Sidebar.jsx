@@ -8,6 +8,8 @@ import {
   Menu,
   X,
   AlertTriangle,
+  PlusCircle,
+  UserPlus,
 } from 'lucide-react';
 import { logout } from '../services/auth';
 
@@ -27,15 +29,15 @@ function normalizeUserType(raw) {
 const HOME_BY_TYPE = {
   CLIENTE: '/',
   ARTISTA: '/dashboard-artista',
-  ADMINISTRADOR: '/admin',
-  CASASHOW: '/admin',
+  ADMINISTRADOR: '/dashboard-admin',
+  CASASHOW: '/dashboard-casa',
 };
 
 const PROFILE_BY_TYPE = {
   CLIENTE: '/perfil',
   ARTISTA: '/perfil-artista',
-  ADMINISTRADOR: '/perfil',
-  CASASHOW: '/perfil',
+  ADMINISTRADOR: '/perfil-admin',
+  CASASHOW: '/perfil-casa',
 };
 
 export default function Sidebar({ currentPath, onNavigate }) {
@@ -101,6 +103,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
       menuPrincipal = [
         { icon: Home, label: 'Painel', path: homePath },
         { icon: Table, label: 'Propostas', path: '/propostas' },
+        { icon: PlusCircle, label: 'Criar evento', path: '/novo-evento' },
       ];
       break;
 
@@ -108,6 +111,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
       menuPrincipal = [
         { icon: Home, label: 'Painel', path: homePath },
         { icon: Table, label: 'Tabelas', path: '/tabelas' },
+        { icon: UserPlus, label: 'Cadastrar', path: '/cadastro' },
       ];
       break;
 
