@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, Edit, MoreVertical, AlertTriangle, X } from 'lucide-react';
 import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
-import AdminSolicitacoes from '../components/AdminSolicitacoes';
+// import AdminSolicitacoes from '../components/AdminSolicitacoes';
 import { authFetch } from '../services/auth';
 /* eslint-disable react/prop-types */
 
@@ -1823,13 +1823,13 @@ export default function Tabelas() {
         onSaved={handleSavedClient}
       />
 
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
         <AdminSolicitacoes />
-      </motion.div>
+      </motion.div> */}
 
       {(errEmployees || errArtists || errVenues || errClients) && (
         <div className="glass p-4 border border-red-500/40 text-red-300 text-sm rounded-xl">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Phone, Mail, Users, MessageSquare, Building, Camera } from 'lucide-react';
+import { MapPin, Phone, Mail, Users, Building, Camera } from 'lucide-react';
 import { getCurrentUser, authFetch } from '../services/auth';
 
 export default function Perfil() {
