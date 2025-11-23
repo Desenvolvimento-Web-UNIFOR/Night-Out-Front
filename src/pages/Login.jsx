@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Facebook } from 'lucide-react';
-import { FcGoogle } from 'react-icons/fc';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { login } from '../services/auth';
@@ -98,30 +97,14 @@ export default function Login({ onNavigate }) {
               </div>
             )}
             
-            <div className="space-y-3 mb-6">
-              <button
-                type="button"
-                className="w-full flex items-center justify-center space-x-3 bg-[#1877f2] hover:bg-[#1877f2]/90 text-white py-3 px-4 rounded-xl font-medium transition-colors focus-ring"
-              >
-                <Facebook size={20} />
-                <span>Continuar com Facebook</span>
-              </button>
-
-              <button
-                type="button"
-                className="w-full flex items-center justify-center space-x-3 bg-white hover:bg-gray-100 border border-gray-300 text-gray-900 py-3 px-4 rounded-xl font-medium transition-colors focus-ring"
-              >
-                <FcGoogle size={20} />
-                <span>Continuar com Google</span>
-              </button>
-            </div>
+            
 
             <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-bgAlt px-4 text-muted">ou entre com email</span>
+                <span className="bg-bgAlt px-4 text-muted">entre com email</span>
               </div>
             </div>
 
@@ -178,13 +161,6 @@ export default function Login({ onNavigate }) {
                   />
                   <span className="ml-2 text-sm text-muted">Lembrar de mim</span>
                 </label>
-                <button
-                  type="button"
-                  className="text-sm text-primary hover:text-primary2 transition-colors focus-ring"
-                  onClick={() => onNavigate('/recuperar-senha')}
-                >
-                  Esqueceu a senha?
-                </button>
               </div>
 
               <button

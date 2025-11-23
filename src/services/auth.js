@@ -34,9 +34,13 @@ export async function login({ email, password }) {
 
   let userId = data?.id || data?.id_usuario;
   if (!userId && token) {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload)).catch(() => ({}));
-    userId = decoded?.id || decoded?.id_usuario;
+    try {
+      const payload = token.split(".")[1];
+      const decoded = JSON.parse(atob(payload));
+      userId = decoded?.id || decoded?.id_usuario;
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   const user = {
