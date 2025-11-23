@@ -31,10 +31,7 @@ export default function PerfilCasaShow() {
     setLoading(true);
     try {
       const data = await authFetch(`/casaDeShow/${currentUser.id}`);
-      console.log('Casa de Show details fetched:', data);
       setUserDetails(data);
-    } catch (err) {
-      console.error('Erro ao buscar detalhes da casa de show:', err);
     } finally {
       setLoading(false);
     }
@@ -68,9 +65,6 @@ export default function PerfilCasaShow() {
         localStorage.setItem(`avatar_${user.id}`, base64String);
       };
       reader.readAsDataURL(file);
-    } catch (err) {
-      console.error('Erro ao fazer upload da foto:', err);
-      alert('Erro ao fazer upload da foto. Tente novamente.');
     } finally {
       setUploading(false);
     }
@@ -206,31 +200,9 @@ export default function PerfilCasaShow() {
           className="glass p-6"
         >
           <h2 className="text-xl font-semibold text-text mb-6">Sobre o Estabelecimento</h2>
-          <p className="text-muted leading-relaxed mb-6">
-            {userDetails?.descricao || 'Casa de show especializada em proporcionar as melhores experiências de entretenimento noturno. Espaço moderno e acolhedor para eventos musicais e apresentações artísticas.'}
+          <p className="text-muted leading-relaxed">
+            {userDetails?.descricao || 'Nosso estabelecimento é referência em entretenimento noturno, oferecendo uma experiência única e inesquecível para todos os públicos. Com infraestrutura moderna e completa, contamos com sistema de som de alta qualidade, iluminação profissional e um ambiente cuidadosamente projetado para garantir o máximo conforto e segurança dos nossos frequentadores. Nossa equipe altamente qualificada trabalha incansavelmente para proporcionar eventos memoráveis, desde shows ao vivo com grandes artistas nacionais e internacionais até festas temáticas que marcam presença no calendário cultural da cidade. Valorizamos a diversidade musical e cultural, apresentando uma programação variada que inclui diversos gêneros musicais como rock, sertanejo, eletrônica, funk, pagode e muito mais. Nosso espaço é ideal tanto para quem busca curtir uma noite animada com os amigos quanto para empresas que desejam realizar eventos corporativos em um ambiente descontraído e profissional. Além disso, oferecemos serviços de bar completo com drinks exclusivos preparados por bartenders especializados, e um cardápio gastronômico que agrada os paladares mais exigentes. Estamos comprometidos em oferecer sempre o melhor em entretenimento, mantendo altos padrões de qualidade em todos os nossos serviços.'}
           </p>
-
-          <div className="pt-6 border-t border-border">
-            <h3 className="text-sm font-semibold text-text mb-3">Estatísticas</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="glass-light p-4 rounded-xl">
-                <p className="text-2xl font-bold text-primary">24</p>
-                <p className="text-sm text-muted">Eventos Realizados</p>
-              </div>
-              <div className="glass-light p-4 rounded-xl">
-                <p className="text-2xl font-bold text-success">4.8</p>
-                <p className="text-sm text-muted">Avaliação Média</p>
-              </div>
-              <div className="glass-light p-4 rounded-xl">
-                <p className="text-2xl font-bold text-info">2.4k</p>
-                <p className="text-sm text-muted">Público Total</p>
-              </div>
-              <div className="glass-light p-4 rounded-xl">
-                <p className="text-2xl font-bold text-warning">12</p>
-                <p className="text-sm text-muted">Próximos Eventos</p>
-              </div>
-            </div>
-          </div>
         </motion.div>
       </div>
     </div>

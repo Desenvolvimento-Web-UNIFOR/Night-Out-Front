@@ -95,7 +95,6 @@ export default function Sidebar({ currentPath, onNavigate }) {
     case 'ARTISTA':
       menuPrincipal = [
         { icon: Home, label: 'Painel', path: homePath },
-        // { icon: Table, label: 'Propostas', path: '/propostas' },
       ];
       break;
 
@@ -103,6 +102,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
       menuPrincipal = [
         { icon: Home, label: 'Painel', path: homePath },
         { icon: PlusCircle, label: 'Eventos', path: '/novo-evento' },
+        { icon: Table, label: 'Proposta', path: '/propostas' },
       ];
       break;
 

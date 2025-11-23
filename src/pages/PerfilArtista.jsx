@@ -25,8 +25,7 @@ function getUserFromToken() {
     const decoded = atob(base64);
     const json = JSON.parse(decoded);
     return json;
-  } catch (err) {
-    console.error('Falha ao decodificar token JWT:', err);
+  } catch {
     return null;
   }
 }
@@ -79,7 +78,6 @@ export default function PerfilArtista() {
           portifolio: data?.portifolio || '',
         });
       } catch (e) {
-        console.error(e);
         setErr(e?.message || 'Erro ao carregar dados do artista.');
       } finally {
         setLoading(false);
@@ -149,7 +147,6 @@ export default function PerfilArtista() {
 
       setIsEditing(false);
     } catch (e) {
-      console.error(e);
       setErr(e?.message || 'Erro ao salvar alterações.');
     } finally {
       setSaving(false);

@@ -50,11 +50,8 @@ export default function Perfil() {
 
       if (endpoint) {
         const data = await authFetch(endpoint);
-        console.log('User details fetched:', data);
         setUserDetails(data);
       }
-    } catch (err) {
-      console.error('Erro ao buscar detalhes do usuário:', err);
     } finally {
       setLoading(false);
     }
@@ -90,8 +87,7 @@ export default function Perfil() {
         }
       };
       reader.readAsDataURL(file);
-    } catch (err) {
-      console.error('Erro ao fazer upload da foto:', err);
+    } catch {
       alert('Erro ao fazer upload da foto. Tente novamente.');
     } finally {
       setUploading(false);
@@ -381,54 +377,6 @@ export default function Perfil() {
           </p>
         )}
       </motion.div>
-
-      {/* <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-        className="glass p-6"
-      >
-        <h3 className="text-lg font-semibold text-text mb-6">Estabelecimentos / Mensagens</h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            {
-              icon: Building,
-              title: "Bulls Beer",
-              subtitle: "3 eventos ativos",
-              color: "text-primary"
-            },
-            {
-              icon: MessageSquare,
-              title: "12 Mensagens",
-              subtitle: "5 não lidas",
-              color: "text-primary2"
-            },
-            {
-              icon: Users,
-              title: "Equipe",
-              subtitle: "8 membros online",
-              color: "text-accent"
-            }
-          ].map((item, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-panel/50 border border-border rounded-xl p-4 hover:bg-panel/70 transition-all duration-200 cursor-pointer"
-            >
-              <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-lg bg-${item.color.split('-')[1]}/20`}>
-                  <item.icon size={20} className={item.color} />
-                </div>
-                <div>
-                  <p className="font-medium text-text">{item.title}</p>
-                  <p className="text-muted text-sm">{item.subtitle}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div> */}
     </div>
   );
 }

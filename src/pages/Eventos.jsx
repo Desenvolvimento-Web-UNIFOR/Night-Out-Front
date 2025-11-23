@@ -61,7 +61,6 @@ export default function Eventos({ onNavigate }) {
         setEvents(mapped);
         window.__EVENTS__ = mapped;
       } catch (e) {
-        console.error('Erro ao carregar eventos:', e);
         setErrorEvents(e?.message || 'Falha ao carregar eventos.');
       } finally {
         setLoadingEvents(false);

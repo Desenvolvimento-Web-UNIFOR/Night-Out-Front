@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, Edit, MoreVertical, AlertTriangle, X } from 'lucide-react';
 import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
-// import AdminSolicitacoes from '../components/AdminSolicitacoes';
 import { authFetch } from '../services/auth';
 /* eslint-disable react/prop-types */
 
@@ -16,11 +15,9 @@ function ViewEmployeeDetailsModal({ open, employeeId, onClose }) {
       setLoading(true);
       authFetch(`/adm/${employeeId}`)
         .then((data) => {
-          console.log('Employee data received:', data);
           setEmployee(data);
         })
-        .catch((err) => {
-          console.error('Erro ao buscar funcionário:', err);
+        .catch(() => {
         })
         .finally(() => {
           setLoading(false);
@@ -117,11 +114,9 @@ function ViewArtistDetailsModal({ open, artistId, onClose }) {
       setLoading(true);
       authFetch(`/artista/${artistId}`)
         .then((data) => {
-          console.log('Artist data received:', data);
           setArtist(data);
         })
-        .catch((err) => {
-          console.error('Erro ao buscar artista:', err);
+        .catch(() => {
         })
         .finally(() => {
           setLoading(false);
@@ -230,11 +225,9 @@ function ViewVenueDetailsModal({ open, venueId, onClose }) {
       setLoading(true);
       authFetch(`/casaDeShow/${venueId}`)
         .then((data) => {
-          console.log('Venue data received:', data);
           setVenue(data);
         })
-        .catch((err) => {
-          console.error('Erro ao buscar casa de show:', err);
+        .catch(() => {
         })
         .finally(() => {
           setLoading(false);
@@ -359,11 +352,9 @@ function ViewClientDetailsModal({ open, clientId, onClose }) {
       setLoading(true);
       authFetch(`/cliente/${clientId}`)
         .then((data) => {
-          console.log('Client data received:', data);
           setClient(data);
         })
-        .catch((err) => {
-          console.error('Erro ao buscar cliente:', err);
+        .catch(() => {
         })
         .finally(() => {
           setLoading(false);
@@ -556,7 +547,6 @@ function EditUserModal({ open, user, onClose, onSaved }) {
       setLoading(true);
       try {
         const details = await authFetch(`/adm/${user.id}`, { method: 'GET' });
-        console.log('Detalhes recebidos:', details);
         
         const usuarioData = details.usuario || {};
         
@@ -567,15 +557,7 @@ function EditUserModal({ open, user, onClose, onSaved }) {
           cargo: details.cargo || '',
           permissao_nivel: details.permissao_nivel || '',
         });
-        console.log('Form populado:', {
-          nome: usuarioData.nome,
-          email: usuarioData.email,
-          telefone: usuarioData.telefone,
-          cargo: details.cargo,
-          permissao_nivel: details.permissao_nivel,
-        });
-      } catch (err) {
-        console.error('Erro ao buscar detalhes do administrador:', err);
+      } catch {
         setForm({
           nome: user.nome || user.name || '',
           email: user.email || '',
@@ -764,7 +746,6 @@ function EditArtistModal({ open, artist, onClose, onSaved }) {
       setLoading(true);
       try {
         const details = await authFetch(`/artista/${artist.id}`, { method: 'GET' });
-        console.log('Detalhes do artista recebidos:', details);
         
         const usuarioData = details.usuario || {};
         
@@ -778,8 +759,7 @@ function EditArtistModal({ open, artist, onClose, onSaved }) {
           descricao: details.descricao || '',
           portifolio: details.portifolio || '',
         });
-      } catch (err) {
-        console.error('Erro ao buscar detalhes do artista:', err);
+      } catch {
         setForm({
           nome: artist.nome || artist.name || '',
           email: artist.email || '',
@@ -1008,7 +988,6 @@ function EditVenueModal({ open, venue, onClose, onSaved }) {
       setLoading(true);
       try {
         const details = await authFetch(`/casaDeShow/${venue.id}`, { method: 'GET' });
-        console.log('Detalhes da casa de show recebidos:', details);
         
         const usuarioData = details.usuario || {};
         
@@ -1026,8 +1005,7 @@ function EditVenueModal({ open, venue, onClose, onSaved }) {
           geo_lat: details.geo_lat || '',
           geo_lng: details.geo_lng || '',
         });
-      } catch (err) {
-        console.error('Erro ao buscar detalhes da casa de show:', err);
+      } catch {
         setForm({
           nome: venue.nome || venue.name || '',
           email: venue.email || '',
@@ -1312,7 +1290,6 @@ function EditClientModal({ open, client, onClose, onSaved }) {
       setLoading(true);
       try {
         const details = await authFetch(`/cliente/${client.id}`, { method: 'GET' });
-        console.log('Detalhes do cliente recebidos:', details);
         
         const usuarioData = details.usuario || {};
         
@@ -1324,8 +1301,7 @@ function EditClientModal({ open, client, onClose, onSaved }) {
           preferencias: details.preferencias || '',
           data_nascimento: details.data_nascimento || '',
         });
-      } catch (err) {
-        console.error('Erro ao buscar detalhes do cliente:', err);
+      } catch {
         setForm({
           nome: client.nome || client.name || '',
           email: client.email || '',
@@ -1566,58 +1542,25 @@ export default function Tabelas() {
     setLoadingEmployees(true);
     setErrEmployees('');
     try {
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const currentToken = localStorage.getItem('token');
-      console.log('DEBUG - Usuário logado:', currentUser);
-      console.log('DEBUG - Token presente:', !!currentToken);
-      console.log('DEBUG - Role do usuário:', currentUser.role);
-      console.log('DEBUG - Token completo (copie e teste no Postman):', currentToken);
       
-      if (currentToken) {
-        try {
-          const payload = currentToken.split('.')[1];
-          const decoded = JSON.parse(atob(payload));
-          console.log('DEBUG - JWT decodificado:', decoded);
-          
-          if (decoded.exp) {
-            const expirationDate = new Date(decoded.exp * 1000);
-            const now = new Date();
-            console.log('DEBUG - Token expira em:', expirationDate);
-            console.log('DEBUG - Data atual:', now);
-            console.log('DEBUG - Token expirado?', now > expirationDate);
-            
-            if (now > expirationDate) {
-              console.error('TOKEN EXPIRADO! Faça logout e login novamente.');
-              setErrEmployees('Sua sessão expirou. Por favor, faça login novamente.');
-              return;
-            }
-          }
-        } catch (err) {
-          console.error('Erro ao decodificar JWT:', err);
-        }
-      }
-      
-      console.log('Tentando acessar /adm/ com headers:');
-      console.log('Authorization: Bearer ' + (currentToken ? currentToken.substring(0, 20) + '...' : 'AUSENTE'));
-      console.log('x-api-key:', import.meta.env.VITE_X_API_KEY ? 'presente' : 'AUSENTE');
-      
-      console.log('Tentando primeiro sem barra final...');
-      try {
-        const listWithoutSlash = await authFetch('/adm', { method: 'GET' });
-        console.log('SUCESSO sem barra! Resultado:', listWithoutSlash);
-        const arr = Array.isArray(listWithoutSlash) ? listWithoutSlash : [];
-        setEmployees(arr);
+      if (!currentToken) {
+        setErrEmployees('❌ Você não está autenticado. Por favor, faça login novamente.');
         return;
-      } catch {
-        console.log('Falhou sem barra, tentando com barra...');
       }
       
       const list = await authFetch('/adm/', { method: 'GET' });
       const arr = Array.isArray(list) ? list : [];
       setEmployees(arr);
     } catch (e) {
-      console.error('Erro ao carregar funcionários:', e);
-      setErrEmployees(e?.message || 'Falha ao carregar funcionários.');
+      
+      if (e.status === 403) {
+        setErrEmployees('❌ ERRO 403: O backend está rejeitando sua permissão. Tente fazer LOGOUT e LOGIN novamente para pegar um token novo.');
+      } else if (e.status === 401) {
+        setErrEmployees('❌ ERRO 401: Token inválido ou expirado. Faça logout e login novamente.');
+      } else {
+        setErrEmployees(e?.message || 'Falha ao carregar funcionários.');
+      }
     } finally {
       setLoadingEmployees(false);
     }
@@ -1768,8 +1711,6 @@ export default function Tabelas() {
     const { item, type } = deleteModal;
     if (!item || !type) return;
 
-    console.log('Deletando item:', { item, type, id: item.id, id_usuario: item.id_usuario });
-
     try {
       const itemId = item.id_usuario || item.id;
       
@@ -1793,7 +1734,6 @@ export default function Tabelas() {
       }
       setDeleteModal({ open: false, item: null, type: null });
     } catch (e) {
-      console.error('Erro ao deletar:', e);
       alert(e?.message || 'Não foi possível excluir o item.');
       setDeleteModal({ open: false, item: null, type: null });
     }
@@ -1869,14 +1809,6 @@ export default function Tabelas() {
         onClose={() => setSelectedClient(null)}
         onSaved={handleSavedClient}
       />
-
-      {/* <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <AdminSolicitacoes />
-      </motion.div> */}
 
       {(errEmployees || errArtists || errVenues || errClients) && (
         <div className="glass p-4 border border-red-500/40 text-red-300 text-sm rounded-xl">

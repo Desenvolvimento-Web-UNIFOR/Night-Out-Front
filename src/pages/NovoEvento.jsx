@@ -84,7 +84,6 @@ function CreateEventModal({ open, onClose, onCreated }) {
 
       onClose();
     } catch (err) {
-      console.error(err);
       alert(err?.message || 'Não foi possível criar o evento.');
     } finally {
       setSaving(false);
@@ -282,7 +281,6 @@ export default function NovoEvento() {
 
       setEvents(filtered);
     } catch (e) {
-      console.error(e);
       setErr(e?.message || 'Falha ao carregar eventos.');
     } finally {
       setLoading(false);

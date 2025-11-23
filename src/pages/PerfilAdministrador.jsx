@@ -31,10 +31,7 @@ export default function PerfilAdministrador() {
     setLoading(true);
     try {
       const data = await authFetch(`/adm/${currentUser.id}`);
-      console.log('Admin details fetched:', data);
       setUserDetails(data);
-    } catch (err) {
-      console.error('Erro ao buscar detalhes do administrador:', err);
     } finally {
       setLoading(false);
     }
@@ -68,18 +65,15 @@ export default function PerfilAdministrador() {
         localStorage.setItem(`avatar_${user.id}`, base64String);
       };
       reader.readAsDataURL(file);
-    } catch (err) {
-      console.error('Erro ao fazer upload da foto:', err);
-      alert('Erro ao fazer upload da foto. Tente novamente.');
     } finally {
       setUploading(false);
     }
   };
 
   const displayAvatar = avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612d48b?w=150&h=150&fit=crop&crop=face&auto=format';
-  const displayName = userDetails?.nome || user?.name || 'Administrador';
-  const displayEmail = userDetails?.email || user?.email || 'email@nightout.com';
-  const displayTelefone = userDetails?.telefone || 'Não informado';
+  const displayName = userDetails?.usuario?.nome || userDetails?.nome || user?.name || 'Administrador';
+  const displayEmail = userDetails?.usuario?.email || userDetails?.email || user?.email || 'email@nightout.com';
+  const displayTelefone = userDetails?.usuario?.telefone || userDetails?.telefone || 'Não informado';
   const displayCargo = userDetails?.cargo || 'Não informado';
   const displayPermissao = userDetails?.permissao_nivel || 'Não informado';
 

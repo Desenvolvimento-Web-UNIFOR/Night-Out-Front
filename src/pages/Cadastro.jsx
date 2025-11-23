@@ -38,8 +38,12 @@ export default function Cadastro() {
     nome_fantasia: '',
     cnpj: '',
     endereco: '',
+    bairro: '',
+    estado: '',
+    cep: '',
     capacidade: '',
-    descricao: '',
+    geo_lat: '',
+    geo_lng: '',
   });
 
   const [clienteForm, setClienteForm] = useState({
@@ -47,8 +51,9 @@ export default function Cadastro() {
     email: '',
     telefone: '',
     senha: '',
+    apelido: '',
+    preferencias: '',
     data_nascimento: '',
-    cpf: '',
   });
 
   const handleAdmChange = (e) => {
@@ -98,8 +103,12 @@ export default function Cadastro() {
         nome_fantasia: '',
         cnpj: '',
         endereco: '',
+        bairro: '',
+        estado: '',
+        cep: '',
         capacidade: '',
-        descricao: '',
+        geo_lat: '',
+        geo_lng: '',
       });
     } else if (role === 'CLIENTE') {
       setClienteForm({
@@ -107,8 +116,9 @@ export default function Cadastro() {
         email: '',
         telefone: '',
         senha: '',
+        apelido: '',
+        preferencias: '',
         data_nascimento: '',
-        cpf: '',
       });
     }
   };
@@ -200,22 +210,20 @@ export default function Cadastro() {
 
     try {
       const body = {
-        nome: casaForm.nome || undefined,
-        email: casaForm.email || undefined,
-        telefone: casaForm.telefone || undefined,
-        senha: casaForm.senha || undefined,
-        nome_fantasia: casaForm.nome_fantasia || undefined,
-        cnpj: casaForm.cnpj || undefined,
-        endereco: casaForm.endereco || undefined,
-        capacidade: casaForm.capacidade || undefined,
-        descricao: casaForm.descricao || undefined,
+        nome: casaForm.nome,
+        email: casaForm.email,
+        senha: casaForm.senha,
+        telefone: casaForm.telefone,
+        nome_fantasia: casaForm.nome_fantasia,
+        cnpj: casaForm.cnpj,
+        capacidade: casaForm.capacidade,
+        endereco: casaForm.endereco,
+        bairro: casaForm.bairro,
+        estado: casaForm.estado,
+        cep: casaForm.cep,
+        geo_lat: casaForm.geo_lat,
+        geo_lng: casaForm.geo_lng,
       };
-
-      Object.keys(body).forEach(key => {
-        if (body[key] === undefined || body[key] === '') {
-          delete body[key];
-        }
-      });
 
       await authFetch('/casaDeShow/cadastro', {
         method: 'POST',
@@ -240,13 +248,18 @@ export default function Cadastro() {
     setSuccessMessage('');
 
     try {
+      const dataISO = clienteForm.data_nascimento 
+        ? new Date(clienteForm.data_nascimento + 'T00:00:00.000Z').toISOString()
+        : null;
+
       const body = {
         nome: clienteForm.nome,
         email: clienteForm.email,
-        telefone: clienteForm.telefone,
         senha: clienteForm.senha,
-        data_nascimento: clienteForm.data_nascimento,
-        cpf: clienteForm.cpf,
+        telefone: clienteForm.telefone,
+        apelido: clienteForm.apelido,
+        preferencias: clienteForm.preferencias,
+        data_nascimento: dataISO,
       };
 
       await authFetch('/cliente/cadastro', {
@@ -621,6 +634,7 @@ export default function Cadastro() {
                     name="telefone"
                     value={casaForm.telefone}
                     onChange={handleCasaChange}
+                    placeholder="+5585999999999"
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
                     required
                   />
@@ -657,6 +671,7 @@ export default function Cadastro() {
                     name="cnpj"
                     value={casaForm.cnpj}
                     onChange={handleCasaChange}
+                    placeholder="12.345.678/0001-99"
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
                     required
                   />
@@ -665,10 +680,11 @@ export default function Cadastro() {
                 <div>
                   <label className="block text-sm text-muted mb-1">Capacidade (pessoas)</label>
                   <input
-                    type="number"
+                    type="text"
                     name="capacidade"
                     value={casaForm.capacidade}
                     onChange={handleCasaChange}
+                    placeholder="5000"
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
                     required
                   />
@@ -681,19 +697,75 @@ export default function Cadastro() {
                     name="endereco"
                     value={casaForm.endereco}
                     onChange={handleCasaChange}
+                    placeholder="Av. Beira Mar, 1200"
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
                     required
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm text-muted mb-1">Descrição</label>
-                  <textarea
-                    name="descricao"
-                    value={casaForm.descricao}
+                <div>
+                  <label className="block text-sm text-muted mb-1">Bairro</label>
+                  <input
+                    type="text"
+                    name="bairro"
+                    value={casaForm.bairro}
                     onChange={handleCasaChange}
+                    placeholder="Meireles"
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
-                    rows="3"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-muted mb-1">Estado</label>
+                  <input
+                    type="text"
+                    name="estado"
+                    value={casaForm.estado}
+                    onChange={handleCasaChange}
+                    placeholder="CE"
+                    maxLength="2"
+                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-muted mb-1">CEP</label>
+                  <input
+                    type="text"
+                    name="cep"
+                    value={casaForm.cep}
+                    onChange={handleCasaChange}
+                    placeholder="60165-121"
+                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-muted mb-1">Latitude</label>
+                  <input
+                    type="text"
+                    name="geo_lat"
+                    value={casaForm.geo_lat}
+                    onChange={handleCasaChange}
+                    placeholder="-3.7209"
+                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-muted mb-1">Longitude</label>
+                  <input
+                    type="text"
+                    name="geo_lng"
+                    value={casaForm.geo_lng}
+                    onChange={handleCasaChange}
+                    placeholder="-38.5253"
+                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
+                    required
                   />
                 </div>
               </div>
@@ -760,6 +832,7 @@ export default function Cadastro() {
                     name="telefone"
                     value={clienteForm.telefone}
                     onChange={handleClienteChange}
+                    placeholder="+5585999999999"
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
                     required
                   />
@@ -778,12 +851,13 @@ export default function Cadastro() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-muted mb-1">CPF</label>
+                  <label className="block text-sm text-muted mb-1">Apelido</label>
                   <input
                     type="text"
-                    name="cpf"
-                    value={clienteForm.cpf}
+                    name="apelido"
+                    value={clienteForm.apelido}
                     onChange={handleClienteChange}
+                    placeholder="Como prefere ser chamado"
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
                     required
                   />
@@ -797,6 +871,19 @@ export default function Cadastro() {
                     value={clienteForm.data_nascimento}
                     onChange={handleClienteChange}
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
+                    required
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-muted mb-1">Preferências</label>
+                  <textarea
+                    name="preferencias"
+                    value={clienteForm.preferencias}
+                    onChange={handleClienteChange}
+                    placeholder="Estilos musicais, tipos de eventos, etc."
+                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
+                    rows="3"
                     required
                   />
                 </div>
