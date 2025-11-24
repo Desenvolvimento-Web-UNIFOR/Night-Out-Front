@@ -1,29 +1,86 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { CalendarDays, Clock3, Ticket, MapPin } from "lucide-react";
+import { authFetch } from "../services/auth";
+import { EVENT_COVERS, EVENT_FALLBACK_IMAGE } from "../constants/eventCovers";
 
 export default function EventPage({ onNavigate, params }) {
   const id = params?.id;
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  let event =
-    Array.isArray(window.__EVENTS__)
-      ? window.__EVENTS__.find((e) => String(e.id) === String(id))
-      : null;
+  useEffect(() => {
+    async function loadEvent() {
+      setLoading(true);
 
-  if (!event) {
-    event = {
-      id,
-      title: "Evento",
-      date: "—",
-      time: "—",
-      price: "—",
-      place: "",
-      cover:
-        "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1600&auto=format&fit=crop",
-      hostAvatar:
-        "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=256&auto=format&fit=crop",
-      description:
-        "Detalhes do evento indisponíveis no momento. Volte à lista de eventos e tente novamente.",
-    };
+      try {
+        const data = await authFetch(`/evento/${id}`, { method: "GET" });
+
+        const start = data.data_inicio ? new Date(data.data_inicio) : null;
+
+        const dateLabel = start
+          ? start.toLocaleDateString("pt-BR", {
+              day: "2-digit",
+              month: "short",
+            })
+          : "";
+
+        const timeLabel = start
+          ? start.toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "";
+
+        const coverIndex =
+          typeof id === "number"
+            ? id
+            : Number.parseInt(String(id), 10) || 0;
+
+        const mockCover =
+          EVENT_COVERS[coverIndex % EVENT_COVERS.length] ||
+          EVENT_FALLBACK_IMAGE;
+
+        setEvent({
+          id: data.id_evento,
+          title: data.titulo,
+          description:
+            data.descricao ||
+            "Um evento imperdível para quem curte boa música e uma noite inesquecível.",
+          date: dateLabel,
+          time: timeLabel,
+          place: data.local || "Local a definir",
+          price: "A combinar",
+          cover: mockCover,
+        });
+      } catch (e) {
+        console.error("Erro ao carregar evento:", e);
+        setEvent(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadEvent();
+  }, [id]);
+
+  if (loading || !event) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        Carregando evento...
+      </div>
+    );
   }
+
+  const message = encodeURIComponent(
+    `Gostaria de saber mais sobre o evento ${event.title}`
+  );
+  const whatsappURL = `https://wa.me/558897140476?text=${message}`;
+
+  const dateDisplay = event.date || "Data a definir";
+  const timeDisplay = event.time || "Horário a definir";
+  const priceDisplay =
+    event.price || "A combinar com a casa de show / artista";
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#0B1220] to-[#071224] text-white">
@@ -32,10 +89,10 @@ export default function EventPage({ onNavigate, params }) {
           onClick={() => onNavigate("/eventos")}
           className="inline-flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition"
         >
-          ← Voltar
+          ← Voltar para eventos
         </button>
         <div className="opacity-60 text-sm">
-          Eventos #{String(event.id || "").padStart(2, "0")}
+          Evento #{String(event.id).padStart(2, "0")}
         </div>
       </div>
 
@@ -48,19 +105,15 @@ export default function EventPage({ onNavigate, params }) {
         >
           <div className="relative">
             <img
-              src={event.cover || event.image}
+              src={event.cover}
               alt={event.title}
               className="h-[340px] w-full object-cover"
-            />
-            <img
-              src={event.hostAvatar || event?.artist?.avatar}
-              alt="host"
-              className="absolute right-6 -bottom-8 h-16 w-16 rounded-2xl ring-4 ring-[#0B1220] object-cover"
+              onError={(e) => (e.currentTarget.src = EVENT_FALLBACK_IMAGE)}
             />
           </div>
 
-          <div className="px-6 pt-12 pb-8 md:px-10">
-            <h1 className="text-2xl md:text-[22px] font-semibold tracking-tight">
+          <div className="px-6 pt-8 pb-8 md:px-10">
+            <h1 className="text-2xl md:text-[24px] font-semibold tracking-tight">
               {event.title}
             </h1>
 
@@ -68,22 +121,84 @@ export default function EventPage({ onNavigate, params }) {
               {event.description}
             </p>
 
-            <div className="mt-6 grid gap-3 text-sm text-white/80 sm:grid-cols-3">
-              <div className="flex items-center gap-2">📅 {event.date}</div>
-              <div className="flex items-center gap-2">⏰ {event.time || "22:00"}</div>
-              <div className="flex items-center gap-2">💵 {event.price}</div>
+            <div className="mt-7">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60 mb-3">
+                Informações do evento
+              </h2>
+
+              <div className="grid gap-4 text-sm sm:grid-cols-3">
+                <div className="flex items-start gap-3 rounded-2xl bg-white/5 px-3 py-3">
+                  <div className="mt-0.5">
+                    <CalendarDays className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-white/60">
+                      Data
+                    </div>
+                    <div className="text-sm font-medium text-white">
+                      {dateDisplay}
+                    </div>
+                    <p className="text-xs text-white/60 mt-0.5">
+                      Programe-se para não perder esse dia.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-2xl bg-white/5 px-3 py-3">
+                  <div className="mt-0.5">
+                    <Clock3 className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-white/60">
+                      Horário de início
+                    </div>
+                    <div className="text-sm font-medium text-white">
+                      {timeDisplay}
+                    </div>
+                    <p className="text-xs text-white/60 mt-0.5">
+                      Chegue com antecedência para curtir tudo com calma.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-2xl bg-white/5 px-3 py-3">
+                  <div className="mt-0.5">
+                    <Ticket className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-white/60">
+                      Ingressos / valor
+                    </div>
+                    <div className="text-sm font-medium text-white">
+                      {priceDisplay}
+                    </div>
+                    <p className="text-xs text-white/60 mt-0.5">
+                      Consulte detalhes com a produção pelo WhatsApp.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {event.place && (
+                <div className="mt-4 flex items-start gap-2 text-sm text-white/80">
+                  <MapPin className="h-4 w-4 mt-[3px] text-blue-400" />
+                  <div>
+                    <span className="font-medium">Local: </span>
+                    <span>{event.place}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {event.place && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-white/70">
-                📍 {event.place}
-              </div>
-            )}
-
             <div className="mt-8">
-              <button className="rounded-2xl bg-[#2563eb] px-5 py-3 text-sm font-medium shadow-lg shadow-blue-500/20 hover:bg-[#1e4fd4] transition">
-                Comprar Ingresso
-              </button>
+              <a
+                href={whatsappURL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl bg-[#2563eb] px-5 py-3 text-sm font-medium shadow-lg shadow-blue-500/20 hover:bg-[#1e4fd4] transition"
+              >
+                <span>Entre em contato</span>
+              </a>
             </div>
           </div>
         </motion.div>

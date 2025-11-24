@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   PlusCircle,
   UserPlus,
+  Calendar
 } from 'lucide-react';
 import { logout } from '../services/auth';
 
@@ -95,6 +96,7 @@ export default function Sidebar({ currentPath, onNavigate }) {
     case 'ARTISTA':
       menuPrincipal = [
         { icon: Home, label: 'Painel', path: homePath },
+        { icon: Calendar, label: 'Eventos', path: '/meus-eventos' }, 
       ];
       break;
 

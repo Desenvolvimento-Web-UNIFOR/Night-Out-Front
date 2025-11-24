@@ -5,12 +5,7 @@ import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
 import { authFetch } from '../services/auth';
 
-const EVENT_COVERS = [
-  'https://images.unsplash.com/photo-1514517521153-1be72277b32e?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1512427691650-1e0c2f9a81b3?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1518976024611-28bf4b48222e?auto=format&fit=crop&w=800&q=80',
-];
+import { EVENT_COVERS, EVENT_FALLBACK_IMAGE } from '../constants/eventCovers';
 
 export default function Eventos({ onNavigate }) {
   const [events, setEvents] = useState([]);
@@ -54,6 +49,7 @@ export default function Eventos({ onNavigate }) {
             time: timeLabel,
             place: ev.local || 'Local a definir',
             price: 'A combinar',
+
             image: EVENT_COVERS[index % EVENT_COVERS.length],
           };
         });
@@ -121,69 +117,76 @@ export default function Eventos({ onNavigate }) {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {items.map((event, index) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  className="glass overflow-hidden flex flex-col"
-                >
-                  <div className="relative h-40">
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              {items.map((event, index) => {
+                const cover = EVENT_COVERS[index % EVENT_COVERS.length];
 
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <p className="text-xs text-gray-200 mb-1 flex items-center gap-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-black/40 text-[11px]">
-                          {event.date || 'Em breve'}
-                        </span>
-                        {event.time && (
+                return (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                    className="glass overflow-hidden flex flex-col"
+                  >
+                    <div className="relative h-40">
+                      <img
+                        src={cover}
+                        alt={event.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = EVENT_FALLBACK_IMAGE;
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <p className="text-xs text-gray-200 mb-1 flex items-center gap-2">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-black/40 text-[11px]">
-                            {event.time}
+                            {event.date || 'Em breve'}
                           </span>
-                        )}
+                          {event.time && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-black/40 text-[11px]">
+                              {event.time}
+                            </span>
+                          )}
+                        </p>
+                        <h3 className="text-white font-semibold text-lg leading-tight">
+                          {event.title}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="p-4 flex-1 flex flex-col">
+                      <p className="text-muted text-sm mb-3 line-clamp-2">
+                        {event.description}
                       </p>
-                      <h3 className="text-white font-semibold text-lg leading-tight">
-                        {event.title}
-                      </h3>
+
+                      <div className="space-y-2 text-sm mb-4">
+                        <div className="flex items-center gap-2 text-muted">
+                          <MapPin size={14} />
+                          <span>{event.place}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted">
+                          <Clock size={14} />
+                          <span>{event.time || 'Horário a definir'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted">
+                          <Ticket size={14} />
+                          <span>{event.price}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleViewDetails(event.id)}
+                        className="mt-auto inline-flex items-center justify-between w-full bg-primary hover:bg-primary/90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <span>Ver detalhes</span>
+                        <ChevronRight size={16} />
+                      </button>
                     </div>
-                  </div>
-
-                  <div className="p-4 flex-1 flex flex-col">
-                    <p className="text-muted text-sm mb-3 line-clamp-2">
-                      {event.description}
-                    </p>
-
-                    <div className="space-y-2 text-sm mb-4">
-                      <div className="flex items-center gap-2 text-muted">
-                        <MapPin size={14} />
-                        <span>{event.place}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted">
-                        <Clock size={14} />
-                        <span>{event.time || 'Horário a definir'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted">
-                        <Ticket size={14} />
-                        <span>{event.price}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleViewDetails(event.id)}
-                      className="mt-auto inline-flex items-center justify-between w-full bg-primary hover:bg-primary/90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <span>Ver detalhes</span>
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
 
             <Pagination

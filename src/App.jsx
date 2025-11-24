@@ -62,7 +62,7 @@ const HOME_BY_TYPE = {
 };
 
 const ALLOWED_BY_TYPE = {
-  CLIENTE: new Set(["/", "/perfil", "/eventos", "/event/:id"]),
+  CLIENTE: new Set(["/", "/perfil", "/eventos", "/event/:id", "/estabelecimentos"]),
   ARTISTA: new Set(["/dashboard-artista", "/perfil-artista"]),
   ADMINISTRADOR: new Set(["/dashboard-admin", "/tabelas", "/cadastro", "/perfil-admin"]),
   CASASHOW: new Set([
