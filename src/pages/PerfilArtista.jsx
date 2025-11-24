@@ -1,170 +1,83 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import {
-  MapPin,
-  Phone,
-  Mail,
-  Users,
-  CalendarDays,
-  Music2,
-  Star,
-  MessageSquare,
-  Edit2,
-  X
-} from 'lucide-react';
-import { authFetch, getToken } from '../services/auth';
-
-function getUserFromToken() {
-  try {
-    const token = getToken();
-    if (!token) return null;
-    const [, payload] = token.split('.');
-    if (!payload) return null;
-
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = atob(base64);
-    const json = JSON.parse(decoded);
-    return json;
-  } catch {
-    return null;
-  }
-}
+import { Mail, Phone, Music2, DollarSign, Briefcase, Camera, Link as LinkIcon } from 'lucide-react';
+import { getCurrentUser, authFetch } from '../services/auth';
 
 export default function PerfilArtista() {
-  const [artist, setArtist] = useState(null);
+  const [user, setUser] = useState(null);
+  const [userDetails, setUserDetails] = useState(null);
+  const [avatar, setAvatar] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [form, setForm] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    nome_artista: '',
-    genero_musical: '',
-    cache_min: '',
-    descricao: '',
-    portifolio: '',
-  });
-
-  const userPayload = useMemo(() => getUserFromToken(), []);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
-    async function fetchArtist() {
-      if (!userPayload?.id) {
-        setErr('Usuário não autenticado ou token inválido.');
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setErr('');
-
-      try {
-        const data = await authFetch(`/artista/${userPayload.id}`, {
-          method: 'GET',
-        });
-        setArtist(data);
-
-        setForm({
-          nome: data?.usuario?.nome || '',
-          email: data?.usuario?.email || '',
-          telefone: data?.usuario?.telefone || '',
-          nome_artista: data?.nome_artista || '',
-          genero_musical: data?.genero_musical || '',
-          cache_min: data?.cache_min || '',
-          descricao: data?.descricao || '',
-          portifolio: data?.portifolio || '',
-        });
-      } catch (e) {
-        setErr(e?.message || 'Erro ao carregar dados do artista.');
-      } finally {
-        setLoading(false);
-      }
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+    
+    const savedAvatar = localStorage.getItem(`avatar_${currentUser.id}`);
+    if (savedAvatar) {
+      setAvatar(savedAvatar);
     }
 
-    fetchArtist();
-  }, [userPayload]);
+    if (currentUser?.id) {
+      fetchUserDetails(currentUser);
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
-  const displayName =
-    artist?.usuario?.nome || artist?.nome_artista || 'Artista';
+  const fetchUserDetails = async (currentUser) => {
+    setLoading(true);
+    try {
+      const data = await authFetch(`/artista/${currentUser.id}`);
+      setUserDetails(data);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const displayEmail = artist?.usuario?.email || '';
-  const displayPhone = artist?.usuario?.telefone || '';
-  const displayBio = artist?.descricao || 'Adicione uma descrição no seu perfil.';
-  const displayLocation = artist?.usuario?.cidade || artist?.usuario?.localizacao || 'Localização não informada';
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
 
-  const avatarLetter = displayName?.charAt(0)?.toUpperCase() || 'A';
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  }
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione uma imagem válida.');
+      return;
+    }
 
-  async function handleSave(e) {
-    e.preventDefault();
-    if (!userPayload?.id) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 5MB.');
+      return;
+    }
 
-    setSaving(true);
-    setErr('');
-
-    const payload = {
-      nome_artista: form.nome_artista,
-      genero_musical: form.genero_musical,
-      cache_min: form.cache_min,
-      descricao: form.descricao,
-      portifolio: form.portifolio,
-      usuario: [
-        {
-          nome: form.nome,
-          email: form.email,
-          telefone: form.telefone,
-        },
-      ],
-    };
+    setUploading(true);
 
     try {
-      const resp = await authFetch(`/artistas/${userPayload.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const updatedArtist = resp?.artista || resp;
-      setArtist(updatedArtist);
-
-      setForm({
-        nome: updatedArtist?.usuario?.nome || '',
-        email: updatedArtist?.usuario?.email || '',
-        telefone: updatedArtist?.usuario?.telefone || '',
-        nome_artista: updatedArtist?.nome_artista || '',
-        genero_musical: updatedArtist?.genero_musical || '',
-        cache_min: updatedArtist?.cache_min || '',
-        descricao: updatedArtist?.descricao || '',
-        portifolio: updatedArtist?.portifolio || '',
-      });
-
-      setIsEditing(false);
-    } catch (e) {
-      setErr(e?.message || 'Erro ao salvar alterações.');
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result;
+        setAvatar(base64String);
+        localStorage.setItem(`avatar_${user.id}`, base64String);
+      };
+      reader.readAsDataURL(file);
     } finally {
-      setSaving(false);
+      setUploading(false);
     }
-  }
+  };
+
+  const displayAvatar = avatar || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop&auto=format';
+  const displayName = userDetails?.nome_artista || user?.name || 'Artista';
+  const displayEmail = user?.email || userDetails?.usuario?.email || 'email@nightout.com';
 
   if (loading) {
     return (
-      <div className="glass p-8">
-        <p className="text-muted">Carregando perfil do artista…</p>
-      </div>
-    );
-  }
-
-  if (err && !artist) {
-    return (
-      <div className="glass p-8">
-        <p className="text-red-400">{err}</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-muted">Carregando...</p>
       </div>
     );
   }
@@ -174,73 +87,123 @@ export default function PerfilArtista() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.6 }}
         className="glass p-8"
       >
-        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
-          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/70 to-primary2/70 flex items-center justify-center text-3xl font-bold text-white shadow-lg">
-            {avatarLetter}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-8">
+          <div className="relative">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <div
+              onClick={handleAvatarClick}
+              className="w-32 h-32 rounded-2xl overflow-hidden cursor-pointer relative group"
+            >
+              <img
+                src={displayAvatar}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="text-white" size={32} />
+              </div>
+              {uploading && (
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                  <p className="text-white text-sm">Enviando...</p>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex-1">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold">{displayName}</h1>
-                <p className="text-muted mt-1">{displayBio}</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-panel/70 hover:bg-panel focus-ring text-sm font-medium"
-              >
-                <Edit2 size={16} />
-                Editar perfil
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-6 mt-4">
-              <div className="text-center">
-                <p className="text-sm text-muted">Gênero musical</p>
-                <p className="text-lg font-semibold text-primary">
-                  {artist?.genero_musical || '—'}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted">Cachê mínimo</p>
-                <p className="text-lg font-semibold text-primary2">
-                  {artist?.cache_min ? `R$ ${artist.cache_min}` : 'Não informado'}
-                </p>
-              </div>
+            <h1 className="text-3xl font-bold text-text mb-2">{displayName}</h1>
+            <p className="text-muted mb-4">{displayEmail}</p>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-3 py-1 bg-accent/20 text-accent rounded-lg text-sm font-medium">
+                Artista
+              </span>
+              <span className="px-3 py-1 bg-success/20 text-success rounded-lg text-sm font-medium">
+                Ativo
+              </span>
             </div>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
           className="glass p-6"
         >
-          <h3 className="text-lg font-semibold mb-4">Informações do Perfil</h3>
+          <h2 className="text-xl font-semibold text-text mb-6">Informações do Artista</h2>
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Phone size={18} className="text-muted" />
-              <span>{displayPhone || 'Telefone não informado'}</span>
+            <div className="flex items-start space-x-3">
+              <Briefcase className="text-accent mt-1" size={20} />
+              <div>
+                <p className="text-sm text-muted">Nome Artístico</p>
+                <p className="text-text">{userDetails?.nome_artista || 'Não informado'}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Mail size={18} className="text-muted" />
-              <span>{displayEmail || 'Email não informado'}</span>
+
+            <div className="flex items-start space-x-3">
+              <Music2 className="text-accent mt-1" size={20} />
+              <div>
+                <p className="text-sm text-muted">Gênero Musical</p>
+                <p className="text-text">{userDetails?.genero_musical || 'Não informado'}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <MapPin size={18} className="text-muted" />
-              <span>{displayLocation}</span>
+
+            <div className="flex items-start space-x-3">
+              <DollarSign className="text-accent mt-1" size={20} />
+              <div>
+                <p className="text-sm text-muted">Cachê Mínimo</p>
+                <p className="text-text">
+                  {userDetails?.cache_min 
+                    ? `R$ ${Number(userDetails.cache_min).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    : 'Não informado'}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Users size={18} className="text-muted" />
-              <span>Equipe: -</span>
+
+            <div className="flex items-start space-x-3">
+              <Mail className="text-accent mt-1" size={20} />
+              <div>
+                <p className="text-sm text-muted">Email</p>
+                <p className="text-text">{displayEmail}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <Phone className="text-accent mt-1" size={20} />
+              <div>
+                <p className="text-sm text-muted">Telefone</p>
+                <p className="text-text">{userDetails?.usuario?.telefone || 'Não informado'}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <LinkIcon className="text-accent mt-1" size={20} />
+              <div>
+                <p className="text-sm text-muted">Portfólio</p>
+                {userDetails?.portifolio ? (
+                  <a 
+                    href={userDetails.portifolio} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline break-all"
+                  >
+                    {userDetails.portifolio}
+                  </a>
+                ) : (
+                  <p className="text-text">Não informado</p>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -248,198 +211,15 @@ export default function PerfilArtista() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.05 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
           className="glass p-6"
         >
-          <h3 className="text-lg font-semibold mb-4">Atividade</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-panel/60 border border-border rounded-xl p-4">
-              <div className="text-sm text-muted">Shows no mês</div>
-              <div className="text-2xl font-bold flex items-center gap-2 mt-1">
-                <Music2 size={18} className="text-accent" /> 0
-              </div>
-            </div>
-            <div className="bg-panel/60 border border-border rounded-xl p-4">
-              <div className="text-sm text-muted">Avaliação média</div>
-              <div className="text-2xl font-bold flex items-center gap-2 mt-1">
-                <Star size={18} className="text-warning fill-warning" /> —
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="glass p-6"
-        >
-          <h3 className="text-lg font-semibold mb-4">Propostas recentes</h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-panel/50 border border-border">
-              <MessageSquare size={18} className="text-primary" />
-              <div className="flex-1">
-                <div className="font-medium text-muted">
-                  Nenhuma proposta recente encontrada.
-                </div>
-                <div className="text-sm text-muted flex items-center gap-1">
-                  <CalendarDays size={14} /> —
-                </div>
-              </div>
-            </div>
-          </div>
+          <h2 className="text-xl font-semibold text-text mb-6">Sobre o Artista</h2>
+          <p className="text-muted leading-relaxed">
+            {userDetails?.descricao || 'Artista profissional com vasta experiência em apresentações ao vivo, oferecendo performances envolventes e memoráveis para diversos tipos de eventos. Com um repertório diversificado e adaptável, busco proporcionar entretenimento de alta qualidade que conecta com o público e cria momentos inesquecíveis. Disponível para shows, festas, eventos corporativos e apresentações especiais, sempre mantendo o compromisso com a excelência artística e profissionalismo.'}
+          </p>
         </motion.div>
       </div>
-
-      {err && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-300 text-sm">
-          {err}
-        </div>
-      )}
-
-      {isEditing && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass max-w-xl w-full p-6 relative"
-          >
-            <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="absolute top-3 right-3 p-1 rounded-full hover:bg-panel focus-ring"
-            >
-              <X size={18} />
-            </button>
-
-            <h2 className="text-xl font-semibold mb-4">Editar perfil do artista</h2>
-
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-muted mb-1">Nome</label>
-                  <input
-                    type="text"
-                    name="nome"
-                    value={form.nome}
-                    onChange={handleChange}
-                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 focus-ring"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-muted mb-1">
-                    Nome artístico
-                  </label>
-                  <input
-                    type="text"
-                    name="nome_artista"
-                    value={form.nome_artista}
-                    onChange={handleChange}
-                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 focus-ring"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-muted mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 focus-ring"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-muted mb-1">
-                    Telefone
-                  </label>
-                  <input
-                    type="text"
-                    name="telefone"
-                    value={form.telefone}
-                    onChange={handleChange}
-                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 focus-ring"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-muted mb-1">
-                    Gênero musical
-                  </label>
-                  <input
-                    type="text"
-                    name="genero_musical"
-                    value={form.genero_musical}
-                    onChange={handleChange}
-                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 focus-ring"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-muted mb-1">
-                    Cachê mínimo
-                  </label>
-                  <input
-                    type="text"
-                    name="cache_min"
-                    value={form.cache_min}
-                    onChange={handleChange}
-                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 focus-ring"
-                    placeholder="Ex.: 5000"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-muted mb-1">
-                  Descrição / Bio
-                </label>
-                <textarea
-                  name="descricao"
-                  value={form.descricao}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full bg-panel border border-border rounded-lg px-3 py-2 focus-ring resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-muted mb-1">
-                  Portfólio (links, redes sociais, etc)
-                </label>
-                <textarea
-                  name="portifolio"
-                  value={form.portifolio}
-                  onChange={handleChange}
-                  rows={2}
-                  className="w-full bg-panel border border-border rounded-lg px-3 py-2 focus-ring resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 rounded-lg border border-border bg-panel hover:bg-panel/70 text-sm"
-                  disabled={saving}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-primary text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60"
-                  disabled={saving}
-                >
-                  {saving ? 'Salvando…' : 'Salvar alterações'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }

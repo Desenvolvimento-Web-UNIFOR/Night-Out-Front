@@ -13,24 +13,21 @@ import {
   ChevronRight,
   ArrowRight,
   Star,
-  MessageSquare,
-  ShieldCheck, 
-  CalendarCheck 
+  MessageSquare
 } from 'lucide-react';
-import { authFetch } from '../services/auth';
+import { authFetch, getCurrentUser } from '../services/auth';
 
 export default function DashboardArtista({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   
-
+  // --- ESTADOS ---
   const [artistProfile, setArtistProfile] = useState(null);
   const [pendingProposals, setPendingProposals] = useState([]); 
   const [confirmedEvents, setConfirmedEvents] = useState([]);
   const [recents, setRecents] = useState([]); 
+  const [userId, setUserId] = useState(null);
 
-  const [artistaId, setArtistaId] = useState([]);
-  
-
+  // --- ESTADOS DE CONTROLE ---
   const [currentProposalIndex, setCurrentProposalIndex] = useState(0);
   const [kpis, setKpis] = useState({
     saldoMes: 0,
@@ -40,22 +37,38 @@ export default function DashboardArtista({ onNavigate }) {
   });
 
   useEffect(() => {
-    fetchData();
+    // 1. Captura o usuário usando sua função auxiliar do auth.js
+    const user = getCurrentUser();
+    
+    if (user && user.id) {
+      setUserId(user.id);
+      fetchData(user.id);
+    } else {
+      console.error("Usuário não autenticado ou sem ID.");
+      setLoading(false);
+      // onNavigate('/login'); // Descomente se quiser forçar logout
+    }
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (id) => {
     setLoading(true);
     try {
+      // 2. Requisições alinhadas com os Microservices (resolveBaseUrl)
       const [perfilData, propostasData, historicoData] = await Promise.all([
-        authFetch('/artista/me').catch(() => null),
-        authFetch('/propostas').catch(() => []),
-        authFetch('/historico/visitas').catch(() => [])
+        // Microservice Users (Default): Busca perfil
+        authFetch(`/artista/${id}`).catch(() => null), 
+        
+        // Microservice Events (Prefixo /propostaCasa): Busca propostas
+        authFetch(`/propostaCasa/`).catch(() => []),
+        
+        // Microservice Reports (Prefixo /relatorios): Busca histórico
+        authFetch(`/relatorios/visitas/artista/${id}`).catch(() => []) 
       ]);
 
       if (perfilData) setArtistProfile(perfilData);
       if (Array.isArray(historicoData)) setRecents(historicoData);
 
-  
+      // --- PROCESSAMENTO ---
       const todasPropostas = Array.isArray(propostasData) ? propostasData : [];
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -86,7 +99,7 @@ export default function DashboardArtista({ onNavigate }) {
       
       setKpis({
         saldoMes: saldo,
-        propostasTotal: pendentes.length,
+        propostasTotal: todasPropostas.length,
         showsMes: shows,
         cacheMin: perfilData?.cache_min || '0'
       });
@@ -98,20 +111,23 @@ export default function DashboardArtista({ onNavigate }) {
     }
   };
 
-
+  // --- AÇÕES ---
   const handleNext = () => setCurrentProposalIndex(prev => prev === pendingProposals.length - 1 ? 0 : prev + 1);
   const handlePrev = () => setCurrentProposalIndex(prev => prev === 0 ? pendingProposals.length - 1 : prev - 1);
   
   const handleRecusar = async (idProposta) => {
-    const newList = pendingProposals.filter(p => (p.id_proposta_casa || p.id_proposta_artista) !== idProposta);
+    const newList = pendingProposals.filter(p => p.id_proposta_casa !== idProposta);
     setPendingProposals(newList);
     setCurrentProposalIndex(0);
-    await authFetch(`/propostas/${idProposta}/recusar`, { method: 'POST' });
+    
+    // Microservice Events
+    await authFetch(`/propostaCasa/${idProposta}/recusar`, { method: 'POST' });
   };
 
   const handleAceitar = async (idProposta) => {
     console.log("Aceitar proposta:", idProposta);
-    await authFetch(`/propostas/${idProposta}/aceitar`, { method: 'POST' });
+    // Microservice Events
+    await authFetch(`/propostaCasa/${idProposta}/aceitar`, { method: 'POST' });
   };
 
   if (loading) {
@@ -134,58 +150,30 @@ export default function DashboardArtista({ onNavigate }) {
   return (
     <div className="space-y-6 pb-8">
       
+      {/* HEADER DO PERFIL */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass p-6 flex flex-col md:flex-row items-start md:items-center gap-6"
+        className="glass p-6 flex items-center gap-6"
       >
         <img
-          src={artistProfile?.portifolio || "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=200&h=200&fit=crop"}
+          src={localStorage.getItem(`avatar_${userId}`) || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop&auto=format"}
           alt={artistProfile?.nome_artista}
-          className="w-20 h-20 rounded-2xl object-cover border-2 border-primary/30 shadow-lg"
+          className="w-20 h-20 rounded-2xl object-cover border-2 border-accent/30 shadow-lg"
         />
         <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-bold text-text tracking-tight truncate">
             {artistProfile?.nome_artista || 'Artista'}
           </h1>
-          <div className="flex items-center gap-2 mt-1 text-muted">
-            <span>{artistProfile?.usuario?.[0]?.email}</span>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="chip bg-primary/10 text-primary border-primary/20">
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="chip bg-accent/10 text-accent border-accent/20">
               {artistProfile?.genero_musical || 'Gênero não definido'}
             </span>
           </div>
         </div>
-        
-      
-        <div className="flex gap-4 w-full md:w-auto">
-          
-         
-          <div className="glass-panel px-5 py-3 rounded-xl text-center flex-1 md:flex-none min-w-[120px]">
-            <div className="text-xs text-muted uppercase font-semibold tracking-wider mb-1 flex items-center justify-center gap-1">
-              <CalendarCheck size={12} /> Agenda
-            </div>
-            <div className="font-bold text-success flex items-center justify-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
-              </span>
-              Aberta
-            </div>
-          </div>
-
-
-          <div className="glass-panel px-5 py-3 rounded-xl text-center flex-1 md:flex-none min-w-[120px]">
-            <div className="text-xs text-muted uppercase font-semibold tracking-wider mb-1">Conta</div>
-            <div className="font-bold text-primary2 flex items-center justify-center gap-1">
-              <ShieldCheck size={16} /> Verificado
-            </div>
-          </div>
-
-        </div>
       </motion.div>
 
+      {/* KPI CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {KPI_CARDS.map((kpi, idx) => (
           <motion.div
@@ -210,6 +198,7 @@ export default function DashboardArtista({ onNavigate }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        {/* CARROSSEL */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -304,16 +293,10 @@ export default function DashboardArtista({ onNavigate }) {
 
               {pendingProposals.length > 1 && (
                 <>
-                  <button 
-                    onClick={handlePrev} 
-                    className="absolute top-1/2 left-4 -translate-y-1/2 z-30 p-3 rounded-full glass hover:bg-panel/80 transition-all focus-ring group"
-                  >
+                  <button onClick={handlePrev} className="absolute top-1/2 left-4 -translate-y-1/2 z-30 p-3 rounded-full glass hover:bg-panel/80 transition-all focus-ring group">
                     <ChevronLeft size={24} className="text-muted group-hover:text-text" />
                   </button>
-                  <button 
-                    onClick={handleNext} 
-                    className="absolute top-1/2 right-4 -translate-y-1/2 z-30 p-3 rounded-full glass hover:bg-panel/80 transition-all focus-ring group"
-                  >
+                  <button onClick={handleNext} className="absolute top-1/2 right-4 -translate-y-1/2 z-30 p-3 rounded-full glass hover:bg-panel/80 transition-all focus-ring group">
                     <ChevronRight size={24} className="text-muted group-hover:text-text" />
                   </button>
                 </>
