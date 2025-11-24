@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { MapPin } from "lucide-react";
 import { authFetch, getCurrentUser } from "../services/auth";
-import { EVENT_COVERS, EVENT_FALLBACK_IMAGE } from "../constants/eventCovers";
+
+const EVENT_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=400&fit=crop';
 
 function SectionTitle({ children, action, onAction }) {
   return (
@@ -173,15 +174,18 @@ export default function FeedCliente({ onNavigate }) {
               })
             : "";
 
+          const eventoId = ev.id_evento || ev.id;
+          const savedImage = localStorage.getItem(`event_image_${eventoId}`);
+
           return {
-            id: ev.id_evento || ev.id,
+            id: eventoId,
             title: ev.titulo,
             description: ev.descricao,
             date: dateLabel,
             time: timeLabel,
             place: ev.local || "Local a definir",
             price: "A combinar",
-            image: EVENT_COVERS[index % EVENT_COVERS.length],
+            image: savedImage || null,
             createdAt: created,
           };
         });

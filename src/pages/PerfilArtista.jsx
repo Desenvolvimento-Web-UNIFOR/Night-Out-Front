@@ -31,7 +31,10 @@ export default function PerfilArtista() {
     setLoading(true);
     try {
       const data = await authFetch(`/artista/${currentUser.id}`);
-      setUserDetails(data);
+      const artistaData = data?.artista || data;
+      setUserDetails(artistaData);
+    } catch {
+      setUserDetails(null);
     } finally {
       setLoading(false);
     }
@@ -71,8 +74,13 @@ export default function PerfilArtista() {
   };
 
   const displayAvatar = avatar || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop&auto=format';
-  const displayName = userDetails?.nome_artista || user?.name || 'Artista';
-  const displayEmail = user?.email || userDetails?.usuario?.email || 'email@nightout.com';
+  const displayName = userDetails?.nome_artista || userDetails?.nomeArtista || user?.name || user?.nome || 'Artista';
+  const displayEmail = user?.email || userDetails?.usuario?.email || userDetails?.email || 'email@nightout.com';
+  const displayPhone = userDetails?.usuario?.telefone || userDetails?.telefone || 'Não informado';
+  const displayGenero = userDetails?.genero_musical || userDetails?.generoMusical || 'Não informado';
+  const displayCacheMin = userDetails?.cache_min || userDetails?.cacheMin || null;
+  const displayPortfolio = userDetails?.portifolio || userDetails?.portfolio || null;
+  const displayDescricao = userDetails?.descricao || null;
 
   if (loading) {
     return (
@@ -147,7 +155,7 @@ export default function PerfilArtista() {
               <Briefcase className="text-accent mt-1" size={20} />
               <div>
                 <p className="text-sm text-muted">Nome Artístico</p>
-                <p className="text-text">{userDetails?.nome_artista || 'Não informado'}</p>
+                <p className="text-text">{displayName}</p>
               </div>
             </div>
 
@@ -155,7 +163,7 @@ export default function PerfilArtista() {
               <Music2 className="text-accent mt-1" size={20} />
               <div>
                 <p className="text-sm text-muted">Gênero Musical</p>
-                <p className="text-text">{userDetails?.genero_musical || 'Não informado'}</p>
+                <p className="text-text">{displayGenero}</p>
               </div>
             </div>
 
@@ -164,8 +172,8 @@ export default function PerfilArtista() {
               <div>
                 <p className="text-sm text-muted">Cachê Mínimo</p>
                 <p className="text-text">
-                  {userDetails?.cache_min 
-                    ? `R$ ${Number(userDetails.cache_min).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                  {displayCacheMin
+                    ? `R$ ${Number(displayCacheMin).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                     : 'Não informado'}
                 </p>
               </div>
@@ -183,7 +191,7 @@ export default function PerfilArtista() {
               <Phone className="text-accent mt-1" size={20} />
               <div>
                 <p className="text-sm text-muted">Telefone</p>
-                <p className="text-text">{userDetails?.usuario?.telefone || 'Não informado'}</p>
+                <p className="text-text">{displayPhone}</p>
               </div>
             </div>
 
@@ -191,14 +199,14 @@ export default function PerfilArtista() {
               <LinkIcon className="text-accent mt-1" size={20} />
               <div>
                 <p className="text-sm text-muted">Portfólio</p>
-                {userDetails?.portifolio ? (
+                {displayPortfolio ? (
                   <a 
-                    href={userDetails.portifolio} 
+                    href={displayPortfolio} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-accent hover:underline break-all"
                   >
-                    {userDetails.portifolio}
+                    {displayPortfolio}
                   </a>
                 ) : (
                   <p className="text-text">Não informado</p>
@@ -216,7 +224,7 @@ export default function PerfilArtista() {
         >
           <h2 className="text-xl font-semibold text-text mb-6">Sobre o Artista</h2>
           <p className="text-muted leading-relaxed">
-            {userDetails?.descricao || 'Artista profissional com vasta experiência em apresentações ao vivo, oferecendo performances envolventes e memoráveis para diversos tipos de eventos. Com um repertório diversificado e adaptável, busco proporcionar entretenimento de alta qualidade que conecta com o público e cria momentos inesquecíveis. Disponível para shows, festas, eventos corporativos e apresentações especiais, sempre mantendo o compromisso com a excelência artística e profissionalismo.'}
+            {displayDescricao || 'Artista profissional com vasta experiência em apresentações ao vivo, oferecendo performances envolventes e memoráveis para diversos tipos de eventos. Com um repertório diversificado e adaptável, busco proporcionar entretenimento de alta qualidade que conecta com o público e cria momentos inesquecíveis. Disponível para shows, festas, eventos corporativos e apresentações especiais, sempre mantendo o compromisso com a excelência artística e profissionalismo.'}
           </p>
         </motion.div>
       </div>

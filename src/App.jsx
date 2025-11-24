@@ -20,8 +20,10 @@ import FeedCliente from "./pages/FeedCliente";
 import DashboardArtista from "./pages/DashboardArtista";
 import PerfilArtista from "./pages/PerfilArtista";
 import PropostasCasa from "./pages/PropostasCasa";
+import EventosArtista from "./pages/EventosArtista";
 import Cadastro from "./pages/Cadastro";
 import NovoEvento from "./pages/NovoEvento";
+import PropostasArtista from "./pages/PropostasArtista";
 
 function getStoredUser() {
   try {
@@ -63,7 +65,7 @@ const HOME_BY_TYPE = {
 
 const ALLOWED_BY_TYPE = {
   CLIENTE: new Set(["/", "/perfil", "/eventos", "/event/:id", "/estabelecimentos"]),
-  ARTISTA: new Set(["/dashboard-artista", "/perfil-artista"]),
+  ARTISTA: new Set(["/dashboard-artista", "/perfil-artista", "/propostas-artista", "/eventos-artista"]),
   ADMINISTRADOR: new Set(["/dashboard-admin", "/tabelas", "/cadastro", "/perfil-admin"]),
   CASASHOW: new Set([
     "/dashboard-casa",
@@ -95,6 +97,8 @@ const routes = {
   "/": FeedCliente,
   "/propostas": PropostasCasa,
   "/novo-evento": NovoEvento,
+  "/propostas-artista": PropostasArtista,
+  "/eventos-artista": EventosArtista,
 };
 
 const layoutRoutes = [
@@ -114,6 +118,8 @@ const layoutRoutes = [
   "/event/:id",
   "/propostas",
   "/novo-evento",
+  "/propostas-artista",
+  "/eventos-artista",
 ];
 
 function matchRoute(path) {

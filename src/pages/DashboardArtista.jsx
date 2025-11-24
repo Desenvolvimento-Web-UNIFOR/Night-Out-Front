@@ -1,428 +1,489 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Music2,
   DollarSign,
   CalendarDays,
-  Briefcase,
-  CheckCircle2,
-  Clock,
   MapPin,
-  XCircle,
-  ChevronLeft,
-  ChevronRight,
-  ArrowRight,
+  Clock,
   Star,
-  MessageSquare
+  Building2,
+  Award
 } from 'lucide-react';
 import { authFetch, getCurrentUser } from '../services/auth';
 
-export default function DashboardArtista({ onNavigate }) {
+export default function DashboardArtista() {
   const [loading, setLoading] = useState(true);
-  
-  // --- ESTADOS ---
   const [artistProfile, setArtistProfile] = useState(null);
-  const [pendingProposals, setPendingProposals] = useState([]); 
-  const [confirmedEvents, setConfirmedEvents] = useState([]);
-  const [recents, setRecents] = useState([]); 
-  const [userId, setUserId] = useState(null);
-
-  // --- ESTADOS DE CONTROLE ---
-  const [currentProposalIndex, setCurrentProposalIndex] = useState(0);
-  const [kpis, setKpis] = useState({
-    saldoMes: 0,
-    propostasTotal: 0,
-    showsMes: 0,
-    cacheMin: '0'
-  });
+  const [saldoMes, setSaldoMes] = useState(0);
+  const [showsMes, setShowsMes] = useState(0);
+  const [totalAcumulado, setTotalAcumulado] = useState(0);
+  const [proximosEventos, setProximosEventos] = useState([]);
+  const [estabelecimentos, setEstabelecimentos] = useState([]);
+  const [dadosGraficoSaldo, setDadosGraficoSaldo] = useState([]);
+  const [dadosGraficoShows, setDadosGraficoShows] = useState([]);
 
   useEffect(() => {
-    // 1. Captura o usuário usando sua função auxiliar do auth.js
-    const user = getCurrentUser();
-    
-    if (user && user.id) {
-      setUserId(user.id);
-      fetchData(user.id);
-    } else {
-      console.error("Usuário não autenticado ou sem ID.");
-      setLoading(false);
-      // onNavigate('/login'); // Descomente se quiser forçar logout
-    }
+    loadDashboard();
   }, []);
 
-  const fetchData = async (id) => {
+  const loadDashboard = async () => {
     setLoading(true);
     try {
-      // 2. Requisições alinhadas com os Microservices (resolveBaseUrl)
-      const [perfilData, propostasData, historicoData] = await Promise.all([
-        // Microservice Users (Default): Busca perfil
-        authFetch(`/artista/${id}`).catch(() => null), 
-        
-        // Microservice Events (Prefixo /propostaCasa): Busca propostas
-        authFetch(`/propostaCasa/`).catch(() => []),
-        
-        // Microservice Reports (Prefixo /relatorios): Busca histórico
-        authFetch(`/relatorios/visitas/artista/${id}`).catch(() => []) 
+      const currentUser = getCurrentUser();
+      const idArtista = currentUser?.id;
+
+      if (!idArtista) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Buscar dados em paralelo
+      const [perfilRes, propostasRes, eventosRes] = await Promise.all([
+        authFetch(`/artista/${idArtista}`).catch(() => null),
+        authFetch('/propostaArtista?page=1&pageSize=1000').catch(() => []),
+        authFetch('/evento?page=1&pageSize=1000').catch(() => []),
       ]);
 
-      if (perfilData) setArtistProfile(perfilData);
-      if (Array.isArray(historicoData)) setRecents(historicoData);
+      // Processar perfil do artista
+      const perfil = perfilRes?.artista || perfilRes;
+      setArtistProfile(perfil);
 
-      // --- PROCESSAMENTO ---
-      const todasPropostas = Array.isArray(propostasData) ? propostasData : [];
+      // Processar propostas aceitas pelo artista
+      const propostas = Array.isArray(propostasRes) ? propostasRes : propostasRes?.items || [];
+      const propostasAceitas = propostas.filter(p => p.aceito === idArtista);
+
+      // Calcular saldo do mês e shows do mês
       const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+      const mesAtual = now.getMonth();
+      const anoAtual = now.getFullYear();
+      
+      let saldoTotal = 0;
+      let showsTotal = 0;
+      let acumuladoTotal = 0;
+      const saldoPorMes = {};
+      const showsPorMes = {};
 
-      const pendentes = todasPropostas.filter(p => 
-        ['PENDENTE', 'AGUARDANDO'].includes(String(p.status).toUpperCase())
-      );
-      const aceitos = todasPropostas.filter(p => 
-        ['ACEITO', 'CONFIRMADO'].includes(String(p.status).toUpperCase())
-      );
+      // Inicializar últimos 6 meses
+      for (let i = 5; i >= 0; i--) {
+        const data = new Date(anoAtual, mesAtual - i, 1);
+        const chave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+        saldoPorMes[chave] = 0;
+        showsPorMes[chave] = 0;
+      }
 
-      let saldo = 0;
-      let shows = 0;
+      propostasAceitas.forEach(proposta => {
+        const valorOfertado = Number(proposta.valor_ofertado) || 0;
+        acumuladoTotal += valorOfertado;
+        
+        if (proposta.data_evento) {
+          const dataEvento = new Date(proposta.data_evento);
+          const chaveMes = `${dataEvento.getFullYear()}-${String(dataEvento.getMonth() + 1).padStart(2, '0')}`;
+          
+          // Adicionar ao gráfico
+          if (Object.prototype.hasOwnProperty.call(saldoPorMes, chaveMes)) {
+            saldoPorMes[chaveMes] += valorOfertado;
+            showsPorMes[chaveMes] += 1;
+          }
 
-      aceitos.forEach(evento => {
-        const dataEvento = new Date(evento.data_evento);
-        if (dataEvento.getMonth() === currentMonth && dataEvento.getFullYear() === currentYear) {
-          shows++;
-          saldo += Number(evento.valor_ofertado) || 0;
+          // Contar totais do mês atual
+          if (dataEvento.getMonth() === mesAtual && dataEvento.getFullYear() === anoAtual) {
+            saldoTotal += valorOfertado;
+            showsTotal++;
+          }
         }
       });
 
-      aceitos.sort((a, b) => new Date(a.data_evento) - new Date(b.data_evento));
+      setSaldoMes(saldoTotal);
+      setShowsMes(showsTotal);
+      setTotalAcumulado(acumuladoTotal);
 
-      setPendingProposals(pendentes);
-      setConfirmedEvents(aceitos);
+      // Preparar dados para gráficos
+      setDadosGraficoSaldo(Object.values(saldoPorMes));
+      setDadosGraficoShows(Object.values(showsPorMes));
+
+      // Criar mapa de eventos
+      const rawEvents = Array.isArray(eventosRes) ? eventosRes : eventosRes?.eventos || eventosRes?.items || [];
+      const eventosMap = rawEvents.reduce((acc, ev) => {
+        acc[ev.id_evento || ev.id] = ev;
+        return acc;
+      }, {});
+
+      // Mapear próximos eventos (propostas aceitas)
+      const eventos = propostasAceitas
+        .map(p => {
+          const evento = eventosMap[p.id_evento];
+          if (!evento) return null;
+
+          return {
+            id: evento.id_evento,
+            title: evento.titulo,
+            local: evento.local,
+            data_inicio: evento.data_inicio || p.data_evento,
+            cache: p.valor_ofertado,
+            id_casa: p.id_casa, // ID da casa de show vem da proposta
+          };
+        })
+        .filter(e => e !== null)
+        .sort((a, b) => new Date(a.data_inicio) - new Date(b.data_inicio))
+        .slice(0, 3);
+
+      setProximosEventos(eventos);
+
+      // Buscar informações das casas de show a partir do id_casa das propostas
+      const idsCasas = [...new Set(propostasAceitas.map(p => p.id_casa).filter(Boolean))];
       
-      setKpis({
-        saldoMes: saldo,
-        propostasTotal: todasPropostas.length,
-        showsMes: shows,
-        cacheMin: perfilData?.cache_min || '0'
-      });
+      if (idsCasas.length > 0) {
+        const casasPromises = idsCasas.slice(0, 3).map(idCasa =>
+          authFetch(`/casaDeShow/${idCasa}`).catch(() => null)
+        );
+
+        const casasResults = await Promise.all(casasPromises);
+        const casasRecentes = casasResults
+          .filter(casa => casa !== null)
+          .map(casa => ({
+            id: casa.id_usuario || casa.id,
+            nome: casa.nome || casa.name || casa.nome_fantasia || 'Casa de Show',
+            email: casa.email,
+            telefone: casa.telefone,
+          }));
+
+        setEstabelecimentos(casasRecentes);
+      }
 
     } catch (error) {
-      console.error("Erro ao carregar dashboard:", error);
+      console.error('Erro ao carregar dashboard:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- AÇÕES ---
-  const handleNext = () => setCurrentProposalIndex(prev => prev === pendingProposals.length - 1 ? 0 : prev + 1);
-  const handlePrev = () => setCurrentProposalIndex(prev => prev === 0 ? pendingProposals.length - 1 : prev - 1);
-  
-  const handleRecusar = async (idProposta) => {
-    const newList = pendingProposals.filter(p => p.id_proposta_casa !== idProposta);
-    setPendingProposals(newList);
-    setCurrentProposalIndex(0);
-    
-    // Microservice Events
-    await authFetch(`/propostaCasa/${idProposta}/recusar`, { method: 'POST' });
-  };
-
-  const handleAceitar = async (idProposta) => {
-    console.log("Aceitar proposta:", idProposta);
-    // Microservice Events
-    await authFetch(`/propostaCasa/${idProposta}/aceitar`, { method: 'POST' });
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
   }
 
-  const currentProposal = pendingProposals[currentProposalIndex];
-
-  const KPI_CARDS = [
-    { label: "Saldo (Mês)", value: `R$ ${kpis.saldoMes.toLocaleString('pt-BR')}`, icon: DollarSign, colorClass: "text-success bg-success/15" },
-    { label: "Propostas", value: kpis.propostasTotal.toString(), icon: MessageSquare, colorClass: "text-primary bg-primary/15" },
-    { label: "Shows (Mês)", value: kpis.showsMes.toString(), icon: Music2, colorClass: "text-accent bg-accent/15" },
-    { label: "Cachê Mínimo", value: `R$ ${Number(kpis.cacheMin).toLocaleString('pt-BR')}`, icon: Briefcase, colorClass: "text-primary2 bg-primary2/15" },
-  ];
+  const currentUser = getCurrentUser();
+  const displayAvatar = localStorage.getItem(`avatar_${currentUser?.id}`) || 
+    'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop&auto=format';
+  const displayName = artistProfile?.nome_artista || artistProfile?.nomeArtista || currentUser?.name || 'Artista';
+  const displayGenero = artistProfile?.genero_musical || artistProfile?.generoMusical || 'Gênero Musical';
 
   return (
-    <div className="space-y-6 pb-8">
-      
-      {/* HEADER DO PERFIL */}
+    <div className="space-y-6">
+      {/* Header com Foto e Info do Artista */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
         className="glass p-6 flex items-center gap-6"
       >
         <img
-          src={localStorage.getItem(`avatar_${userId}`) || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop&auto=format"}
-          alt={artistProfile?.nome_artista}
-          className="w-20 h-20 rounded-2xl object-cover border-2 border-accent/30 shadow-lg"
+          src={displayAvatar}
+          alt={displayName}
+          className="w-24 h-24 rounded-2xl object-cover border-2 border-primary/30 shadow-lg"
         />
-        <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold text-text tracking-tight truncate">
-            {artistProfile?.nome_artista || 'Artista'}
-          </h1>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <span className="chip bg-accent/10 text-accent border-accent/20">
-              {artistProfile?.genero_musical || 'Gênero não definido'}
-            </span>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold text-text mb-2">{displayName}</h1>
+          <div className="flex items-center gap-2">
+            <Music2 size={18} className="text-primary" />
+            <span className="text-muted">{displayGenero}</span>
           </div>
         </div>
       </motion.div>
 
-      {/* KPI CARDS */}
+      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {KPI_CARDS.map((kpi, idx) => (
-          <motion.div
-            key={idx}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="glass p-5 hover:glow-primary transition-all duration-300"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-muted">{kpi.label}</p>
-                <h3 className="text-2xl font-bold text-text mt-2">{kpi.value}</h3>
-              </div>
-              <div className={`p-3 rounded-xl ${kpi.colorClass}`}>
-                <kpi.icon size={20} />
-              </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="glass p-6 hover:glow-primary transition-all duration-300"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm text-muted mb-1">Saldo Mês</p>
+              <h3 className="text-2xl font-bold text-emerald-400">
+                R$ {saldoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </h3>
             </div>
-          </motion.div>
-        ))}
+            <div className="p-3 rounded-xl bg-emerald-500/15">
+              <DollarSign size={20} className="text-emerald-400" />
+            </div>
+          </div>
+          <p className="text-xs text-muted">Soma das propostas aceitas</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="glass p-6 hover:glow-primary transition-all duration-300"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm text-muted mb-1">Shows</p>
+              <h3 className="text-2xl font-bold text-primary">
+                {showsMes}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-primary/15">
+              <CalendarDays size={20} className="text-primary" />
+            </div>
+          </div>
+          <p className="text-xs text-muted">Propostas aceitas este mês</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="glass p-6 hover:glow-primary transition-all duration-300"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm text-muted mb-1">Próximos Eventos</p>
+              <h3 className="text-2xl font-bold text-accent">
+                {proximosEventos.length}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-accent/15">
+              <Music2 size={20} className="text-accent" />
+            </div>
+          </div>
+          <p className="text-xs text-muted">Eventos confirmados</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="glass p-6 hover:glow-primary transition-all duration-300"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm text-muted mb-1">Total Acumulado</p>
+              <h3 className="text-2xl font-bold text-warning">
+                R$ {totalAcumulado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-warning/15">
+              <Award size={20} className="text-warning" />
+            </div>
+          </div>
+          <p className="text-xs text-muted">Soma total das propostas aceitas</p>
+        </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* CARROSSEL */}
+      {/* Gráficos de Saldo e Shows */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gráfico de Saldo por Mês */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="glass lg:col-span-2 relative overflow-hidden min-h-[400px] flex flex-col"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="glass p-6"
         >
-          {pendingProposals.length > 0 && currentProposal ? (
-            <>
-              <div className="absolute inset-0 z-0">
-                <div className="absolute inset-0 bg-gradient-to-r from-bg via-bg/95 to-bg/80 z-10" />
-                <img 
-                  src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1200&auto=format&fit=crop" 
-                  alt="Background" 
-                  className="w-full h-full object-cover opacity-30"
-                />
-              </div>
-
-              <div className="relative z-20 p-8 flex flex-col h-full">
-                <div className="flex justify-between items-start mb-6">
-                  <span className="chip-warning border border-warning/20 shadow-lg shadow-warning/10">
-                    Proposta Pendente #{currentProposalIndex + 1}
-                  </span>
-                  <span className="text-sm font-medium text-muted bg-black/30 px-3 py-1 rounded-full backdrop-blur-md">
-                    Recebida: {new Date(currentProposal.data_proposta || new Date()).toLocaleDateString()}
-                  </span>
+          <h2 className="text-lg font-bold text-text mb-6 flex items-center gap-2">
+            <DollarSign className="text-emerald-400" size={20} />
+            Saldo dos Últimos 6 Meses
+          </h2>
+          
+          <div className="space-y-3">
+            {dadosGraficoSaldo.map((valor, index) => {
+              const maxValor = Math.max(...dadosGraficoSaldo, 1);
+              const porcentagem = (valor / maxValor) * 100;
+              const now = new Date();
+              const mesData = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+              const mesLabel = mesData.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase();
+              
+              return (
+                <div key={index} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted font-medium">{mesLabel}</span>
+                    <span className="text-emerald-400 font-semibold">
+                      R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="w-full h-3 bg-panel rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${porcentagem}%` }}
+                      transition={{ duration: 0.8, delay: index * 0.1 }}
+                      className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+                    />
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        </motion.div>
 
-                <AnimatePresence mode='wait'>
-                  <motion.div
-                    key={currentProposal.id_proposta_casa || currentProposal.id_proposta_artista}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex-1"
-                  >
-                    <h2 className="text-3xl font-bold text-text mb-2">
-                      {currentProposal.evento?.[0]?.titulo || "Evento sem Título"}
-                    </h2>
-                    
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="flex items-center gap-2 text-primary2">
-                        <CalendarDays size={18} />
-                        <span className="font-medium">
-                          {currentProposal.data_evento ? new Date(currentProposal.data_evento).toLocaleDateString() : 'Data a definir'}
-                        </span>
-                      </div>
-                      <div className="w-1 h-1 bg-muted rounded-full" />
-                      <div className="flex items-center gap-2 text-muted">
-                        <Clock size={18} />
-                        <span>{currentProposal.evento?.[0]?.data_inicio ? new Date(currentProposal.evento[0].data_inicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '22:00'}</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div className="glass-panel p-4 rounded-xl border-l-4 border-success">
-                        <p className="text-xs text-muted uppercase tracking-wider mb-1">Cachê Ofertado</p>
-                        <p className="text-2xl font-bold text-success">
-                          R$ {Number(currentProposal.valor_ofertado).toLocaleString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className="glass-panel p-4 rounded-xl border-l-4 border-primary">
-                        <p className="text-xs text-muted uppercase tracking-wider mb-1">Local</p>
-                        <p className="text-lg font-medium text-text truncate">
-                          {currentProposal.evento?.[0]?.local || "Local não informado"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="glass-panel p-4 rounded-xl mb-6">
-                      <p className="text-sm text-muted leading-relaxed">
-                        <span className="font-semibold text-primary2">Termos:</span> {currentProposal.termos || "Termos padrão da casa aplicáveis."}
-                      </p>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-
-                <div className="flex gap-4 mt-auto">
-                  <button 
-                    onClick={() => handleAceitar(currentProposal.id_proposta_casa)}
-                    className="btn-primary flex-1 flex items-center justify-center gap-2 shadow-lg shadow-primary/25"
-                  >
-                    <CheckCircle2 size={20} /> Aceitar Proposta
-                  </button>
-                  <button 
-                    onClick={() => handleRecusar(currentProposal.id_proposta_casa)}
-                    className="btn-secondary flex-1 flex items-center justify-center gap-2 text-danger border-danger/20 hover:bg-danger/5 hover:border-danger/40"
-                  >
-                    <XCircle size={20} /> Recusar
-                  </button>
+        {/* Gráfico de Shows por Mês */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="glass p-6"
+        >
+          <h2 className="text-lg font-bold text-text mb-6 flex items-center gap-2">
+            <CalendarDays className="text-primary" size={20} />
+            Shows dos Últimos 6 Meses
+          </h2>
+          
+          <div className="flex items-end justify-between h-48 gap-2">
+            {dadosGraficoShows.map((quantidade, index) => {
+              const maxQuantidade = Math.max(...dadosGraficoShows, 1);
+              const altura = (quantidade / maxQuantidade) * 100;
+              const now = new Date();
+              const mesData = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+              const mesLabel = mesData.toLocaleDateString('pt-BR', { month: 'short' }).charAt(0).toUpperCase();
+              
+              return (
+                <div key={index} className="flex-1 flex flex-col items-center gap-2">
+                  <div className="w-full flex flex-col items-center justify-end h-40">
+                    <span className="text-xs font-semibold text-primary mb-1">
+                      {quantidade > 0 ? quantidade : ''}
+                    </span>
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${altura}%` }}
+                      transition={{ duration: 0.8, delay: index * 0.1 }}
+                      className="w-full bg-gradient-to-t from-primary to-primary/60 rounded-t-lg min-h-[4px]"
+                    />
+                  </div>
+                  <span className="text-xs text-muted font-bold">{mesLabel}</span>
                 </div>
-              </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      </div>
 
-              {pendingProposals.length > 1 && (
-                <>
-                  <button onClick={handlePrev} className="absolute top-1/2 left-4 -translate-y-1/2 z-30 p-3 rounded-full glass hover:bg-panel/80 transition-all focus-ring group">
-                    <ChevronLeft size={24} className="text-muted group-hover:text-text" />
-                  </button>
-                  <button onClick={handleNext} className="absolute top-1/2 right-4 -translate-y-1/2 z-30 p-3 rounded-full glass hover:bg-panel/80 transition-all focus-ring group">
-                    <ChevronRight size={24} className="text-muted group-hover:text-text" />
-                  </button>
-                </>
-              )}
-            </>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Próximos Eventos */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="glass p-6"
+        >
+          <h2 className="text-xl font-bold text-text mb-6 flex items-center gap-2">
+            <CalendarDays className="text-primary" size={22} />
+            Próximos Eventos
+          </h2>
+
+          {proximosEventos.length > 0 ? (
+            <div className="space-y-4">
+              {proximosEventos.map((evento) => {
+                const dataEvento = new Date(evento.data_inicio);
+                const dia = dataEvento.getDate();
+                const mes = dataEvento.toLocaleDateString('pt-BR', { month: 'short' });
+                const hora = dataEvento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                return (
+                  <div
+                    key={evento.id}
+                    className="group relative overflow-hidden rounded-xl border border-border bg-panel/40 hover:border-primary/50 transition-all duration-300"
+                  >
+                    <div className="flex gap-4 p-4">
+                      {/* Data */}
+                      <div className="flex-shrink-0 w-16 h-16 bg-primary/10 border border-primary/30 rounded-xl flex flex-col items-center justify-center">
+                        <span className="text-xs text-primary font-bold uppercase">{mes}</span>
+                        <span className="text-xl font-bold text-text">{dia}</span>
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-text mb-1 truncate group-hover:text-primary transition-colors">
+                          {evento.title}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-muted mb-2">
+                          <MapPin size={14} />
+                          <span className="truncate">{evento.local || 'Local a definir'}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1 text-xs text-muted">
+                            <Clock size={12} />
+                            <span>{hora}</span>
+                          </div>
+                          <div className="text-xs font-semibold text-emerald-400">
+                            R$ {Number(evento.cache || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted p-10">
-              <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-4 border border-success/20">
-                <CheckCircle2 size={32} className="text-success" />
-              </div>
-              <h3 className="text-xl font-bold text-text mb-2">Tudo em dia!</h3>
-              <p>Você não tem nenhuma proposta pendente no momento.</p>
+            <div className="text-center py-12 text-muted border border-dashed border-border rounded-xl bg-panel/20">
+              <CalendarDays size={32} className="mx-auto mb-3 opacity-40" />
+              <p className="text-sm">Nenhum evento confirmado</p>
             </div>
           )}
         </motion.div>
 
+        {/* Estabelecimentos Recentes */}
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="glass p-6 flex flex-col"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="glass p-6"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-text flex items-center gap-2">
-              <CalendarDays className="text-primary" size={20} /> Próximos Eventos
-            </h2>
-            <button 
-              onClick={() => onNavigate('/eventos')} 
-              className="text-xs font-medium text-primary hover:text-primary2 transition-colors"
-            >
-              Ver todos
-            </button>
-          </div>
+          <h2 className="text-xl font-bold text-text mb-6 flex items-center gap-2">
+            <Building2 className="text-accent" size={22} />
+            Estabelecimentos Recentes
+          </h2>
 
-          <div className="space-y-4 overflow-y-auto custom-scrollbar flex-1">
-            {confirmedEvents.length > 0 ? (
-              confirmedEvents.slice(0, 2).map((ev, i) => (
+          {estabelecimentos.length > 0 ? (
+            <div className="space-y-4">
+              {estabelecimentos.map((casa) => (
                 <div
-                  key={i}
-                  className="group p-4 rounded-xl bg-panel/40 border border-border hover:bg-panel/80 hover:border-primary/30 transition-all duration-300"
+                  key={casa.id}
+                  className="group relative overflow-hidden rounded-xl border border-border bg-panel/40 hover:border-accent/50 transition-all duration-300 p-4"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="bg-bgAlt border border-border rounded-lg px-3 py-1 text-center min-w-[3.5rem]">
-                      <div className="text-xs text-muted uppercase font-bold">
-                        {new Date(ev.data_evento).toLocaleDateString('pt-BR', { month: 'short' })}
-                      </div>
-                      <div className="text-lg font-bold text-text">
-                        {new Date(ev.data_evento).getDate()}
-                      </div>
+                  <div className="flex items-start gap-4">
+                    {/* Ícone/Avatar */}
+                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-accent/20 to-primary/20 border border-accent/30 rounded-xl flex items-center justify-center">
+                      <Building2 size={20} className="text-accent" />
                     </div>
-                    <button 
-                      onClick={() => onNavigate(`/event/${ev.evento?.[0]?.id_evento}`)}
-                      className="p-2 rounded-full hover:bg-white/5 text-muted hover:text-primary transition-colors"
-                    >
-                      <ArrowRight size={18} />
-                    </button>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold text-text truncate group-hover:text-primary transition-colors">
-                      {ev.evento?.[0]?.titulo || "Evento Confirmado"}
-                    </h4>
-                    <div className="flex items-center gap-1.5 mt-2 text-sm text-muted">
-                      <MapPin size={14} />
-                      <span className="truncate">{ev.evento?.[0]?.local || "Local a definir"}</span>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-text mb-1 truncate group-hover:text-accent transition-colors">
+                        {casa.nome}
+                      </h3>
+                      {casa.email && (
+                        <p className="text-xs text-muted truncate">{casa.email}</p>
+                      )}
+                      {casa.telefone && (
+                        <p className="text-xs text-muted mt-1">{casa.telefone}</p>
+                      )}
+                    </div>
+
+                    {/* Badge */}
+                    <div className="flex-shrink-0">
+                      <div className="flex items-center gap-1 px-2 py-1 bg-warning/10 border border-warning/30 rounded-full">
+                        <Star size={12} className="text-warning fill-warning" />
+                        <span className="text-xs text-warning font-semibold">4.8</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-10 text-muted border border-dashed border-border rounded-xl bg-panel/20">
-                <CalendarDays size={24} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhum evento agendado.</p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted border border-dashed border-border rounded-xl bg-panel/20">
+              <Building2 size={32} className="mx-auto mb-3 opacity-40" />
+              <p className="text-sm">Nenhum estabelecimento recente</p>
+            </div>
+          )}
         </motion.div>
       </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="glass p-6"
-      >
-        <h2 className="text-lg font-bold text-text mb-6 flex items-center gap-2">
-          <Star className="text-warning" size={20} /> Estabelecimentos Recentes
-        </h2>
-        
-        {recents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {recents.map((r, i) => (
-              <div 
-                key={i} 
-                className="group relative overflow-hidden rounded-xl border border-border bg-panel/40 hover:border-primary/50 transition-all duration-300"
-              >
-                <div className="aspect-video w-full overflow-hidden bg-bgAlt">
-                  <img 
-                    src={r.img || r.foto || "https://images.unsplash.com/photo-1514933651103-005eec06c04b?q=80&w=800"} 
-                    alt={r.name} 
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-bg to-transparent opacity-80" />
-                  
-                  <div className="absolute top-3 left-3 badge-dark flex items-center gap-1">
-                    <Star size={12} className="text-warning fill-warning" />
-                    <span>{r.rating || '4.8'}</span>
-                  </div>
-                </div>
-                
-                <div className="absolute bottom-0 left-0 w-full p-4">
-                  <h4 className="text-lg font-bold text-text group-hover:text-primary transition-colors">
-                    {r.name || r.nome_fantasia || "Nome do Local"}
-                  </h4>
-                  <p className="text-sm text-muted mt-0.5">
-                    {r.tag || r.categoria || "Casa de Show"}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted bg-panel/20 rounded-xl border border-dashed border-border">
-            <p>Nenhum histórico de visitas encontrado.</p>
-          </div>
-        )}
-      </motion.div>
     </div>
   );
 }

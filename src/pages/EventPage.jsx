@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarDays, Clock3, Ticket, MapPin } from "lucide-react";
 import { authFetch } from "../services/auth";
-import { EVENT_COVERS, EVENT_FALLBACK_IMAGE } from "../constants/eventCovers";
+
+const EVENT_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=400&fit=crop';
 
 export default function EventPage({ onNavigate, params }) {
   const id = params?.id;
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [artists, setArtists] = useState([]);
 
   useEffect(() => {
     async function loadEvent() {
@@ -32,14 +34,7 @@ export default function EventPage({ onNavigate, params }) {
             })
           : "";
 
-        const coverIndex =
-          typeof id === "number"
-            ? id
-            : Number.parseInt(String(id), 10) || 0;
-
-        const mockCover =
-          EVENT_COVERS[coverIndex % EVENT_COVERS.length] ||
-          EVENT_FALLBACK_IMAGE;
+        const savedImage = localStorage.getItem(`event_image_${data.id_evento}`);
 
         setEvent({
           id: data.id_evento,
@@ -51,8 +46,24 @@ export default function EventPage({ onNavigate, params }) {
           time: timeLabel,
           place: data.local || "Local a definir",
           price: "A combinar",
-          cover: mockCover,
+          cover: savedImage || EVENT_FALLBACK_IMAGE,
         });
+
+        // Buscar artistas vinculados ao evento
+        try {
+          const artistsData = await authFetch(`/eventoArtista?id_evento=${id}`, { 
+            method: "GET" 
+          });
+
+          const artistsList = Array.isArray(artistsData) 
+            ? artistsData 
+            : artistsData?.items || [];
+
+          setArtists(artistsList);
+        } catch (e) {
+          console.warn("Erro ao carregar artistas do evento:", e);
+          setArtists([]);
+        }
       } catch (e) {
         console.error("Erro ao carregar evento:", e);
         setEvent(null);
@@ -189,6 +200,24 @@ export default function EventPage({ onNavigate, params }) {
                 </div>
               )}
             </div>
+
+            {artists.length > 0 && (
+              <div className="mt-7">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60 mb-3">
+                  Artistas confirmados
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {artists.map((artist, idx) => (
+                    <span
+                      key={artist.id_artista || idx}
+                      className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-sm font-medium"
+                    >
+                      {artist.artista?.nome || artist.nome || `Artista ${idx + 1}`}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mt-8">
               <a

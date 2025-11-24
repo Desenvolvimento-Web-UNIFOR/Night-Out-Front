@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Clock, Ticket, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, Ticket, ChevronRight, Music2 } from 'lucide-react';
 import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
 import { authFetch } from '../services/auth';
 
-import { EVENT_COVERS, EVENT_FALLBACK_IMAGE } from '../constants/eventCovers';
+const EVENT_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=400&fit=crop';
 
 export default function Eventos({ onNavigate }) {
   const [events, setEvents] = useState([]);
@@ -24,7 +24,7 @@ export default function Eventos({ onNavigate }) {
 
         const rawEvents = Array.isArray(data) ? data : data?.eventos || [];
 
-        const mapped = rawEvents.map((ev, index) => {
+        const mapped = await Promise.all(rawEvents.map(async (ev, index) => {
           const start = ev.data_inicio ? new Date(ev.data_inicio) : null;
 
           const dateLabel = start
@@ -41,6 +41,28 @@ export default function Eventos({ onNavigate }) {
               })
             : '';
 
+          // Buscar artistas vinculados
+          let artistNames = [];
+          try {
+            const artistsData = await authFetch(`/eventoArtista?id_evento=${ev.id_evento}`, {
+              method: 'GET',
+            });
+
+            const artistsList = Array.isArray(artistsData)
+              ? artistsData
+              : artistsData?.items || [];
+
+            artistNames = artistsList.map(a => 
+              a.artista?.nome || a.nome || 'Artista'
+            );
+          } catch (e) {
+            console.warn(`Erro ao carregar artistas do evento ${ev.id_evento}:`, e);
+          }
+
+          // Buscar foto do evento do localStorage
+          const eventoId = ev.id_evento;
+          const savedImage = localStorage.getItem(`event_image_${eventoId}`);
+
           return {
             id: ev.id_evento,
             title: ev.titulo,
@@ -49,10 +71,10 @@ export default function Eventos({ onNavigate }) {
             time: timeLabel,
             place: ev.local || 'Local a definir',
             price: 'A combinar',
-
-            image: EVENT_COVERS[index % EVENT_COVERS.length],
+            artists: artistNames,
+            image: savedImage || null,
           };
-        });
+        }));
 
         setEvents(mapped);
         window.__EVENTS__ = mapped;
@@ -118,7 +140,7 @@ export default function Eventos({ onNavigate }) {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {items.map((event, index) => {
-                const cover = EVENT_COVERS[index % EVENT_COVERS.length];
+                const cover = event.image || EVENT_FALLBACK_IMAGE;
 
                 return (
                   <motion.div
@@ -174,6 +196,21 @@ export default function Eventos({ onNavigate }) {
                           <Ticket size={14} />
                           <span>{event.price}</span>
                         </div>
+                        {event.artists && event.artists.length > 0 && (
+                          <div className="flex items-start gap-2 text-muted">
+                            <Music2 size={14} className="mt-0.5" />
+                            <div className="flex flex-wrap gap-1">
+                              {event.artists.map((artist, idx) => (
+                                <span 
+                                  key={idx}
+                                  className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
+                                >
+                                  {artist}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <button

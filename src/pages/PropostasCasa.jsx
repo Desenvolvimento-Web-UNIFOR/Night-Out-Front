@@ -3,13 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, X, Filter } from 'lucide-react';
 import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
-import { authFetch } from '../services/auth';
+import { authFetch, getCurrentUser } from '../services/auth';
+
+function toIsoDateTime(dateStr) {
+  if (!dateStr) return new Date().toISOString();
+
+  if (dateStr.includes('T')) return dateStr;
+
+  return new Date(`${dateStr}T00:00:00`).toISOString();
+}
 
 // eslint-disable-next-line react/prop-types
 function CreatePropostaModal({ open, onClose, onCreated }) {
   const [form, setForm] = useState({
-    id_proposta_casa: '',
-    id_artista: '',
+    id_proposta_artista: '',
     id_evento: '',
     data_proposta: '',
     data_evento: '',
@@ -19,15 +26,61 @@ function CreatePropostaModal({ open, onClose, onCreated }) {
   });
   const [saving, setSaving] = useState(false);
 
+  const [events, setEvents] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [optionsError, setOptionsError] = useState('');
+
   useEffect(() => {
-    if (open) {
-      setForm((prev) => ({
-        ...prev,
-        data_proposta:
-          prev.data_proposta || new Date().toISOString().slice(0, 10),
-      }));
+    if (!open) return;
+
+    setForm((prev) => ({
+      ...prev,
+      data_proposta:
+        prev.data_proposta || new Date().toISOString().slice(0, 10),
+    }));
+
+    async function loadOptions() {
+      setLoadingOptions(true);
+      setOptionsError('');
+
+      try {
+        const currentUser = getCurrentUser();
+        const idCasa = currentUser?.id;
+
+        const eventosRes = await authFetch('/evento?page=1&pageSize=200', { 
+          method: 'GET' 
+        });
+
+        const rawEvents = Array.isArray(eventosRes)
+          ? eventosRes
+          : eventosRes?.eventos || eventosRes?.items || [];
+
+        // Filtrar apenas eventos da casa de show logada
+        const filteredEvents = idCasa
+          ? rawEvents.filter((ev) => ev.id_usuario === idCasa)
+          : rawEvents;
+
+        setEvents(
+          filteredEvents.map((ev) => ({
+            id: ev.id_evento || ev.id,
+            title: ev.titulo || ev.nome || 'Evento sem título',
+          })),
+        );
+      } catch (e) {
+        console.error('Erro ao carregar eventos:', e);
+        setOptionsError(
+          e?.message ||
+            'Falha ao carregar eventos. Tente novamente.',
+        );
+      } finally {
+        setLoadingOptions(false);
+      }
     }
-  }, [open]);
+
+    if (!events.length) {
+      loadOptions();
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open) return null;
 
@@ -43,20 +96,25 @@ function CreatePropostaModal({ open, onClose, onCreated }) {
     try {
       setSaving(true);
 
+      const currentUser = getCurrentUser();
+      const idCasa = currentUser?.id;
+
+      if (!idCasa) {
+        throw new Error('Usuário não autenticado ou ID da casa não encontrado.');
+      }
+
       const payload = {
-        id_proposta_casa: form.id_proposta_casa || undefined,
-        id_artista: form.id_artista,
+        id_proposta_artista: form.id_proposta_artista || undefined,
+        id_casa: idCasa,
         id_evento: form.id_evento,
-        data_proposta: form.data_proposta || new Date().toISOString(),
-        data_evento: form.data_evento || null,
-        valor_ofertado: form.valor_ofertado
-          ? Number(form.valor_ofertado)
-          : null,
+        data_proposta: toIsoDateTime(form.data_proposta),
+        data_evento: form.data_evento ? toIsoDateTime(form.data_evento) : null,
+        valor_ofertado: String(form.valor_ofertado),
         status: form.status || 'DISPONÍVEL',
         termos: form.termos || '',
       };
 
-      const res = await authFetch('/propostaCasa', {
+      const res = await authFetch('/propostaArtista', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -95,7 +153,7 @@ function CreatePropostaModal({ open, onClose, onCreated }) {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-text">
-                Nova Proposta para Artista
+                Nova proposta para artista
               </h2>
               <button
                 onClick={onClose}
@@ -105,15 +163,21 @@ function CreatePropostaModal({ open, onClose, onCreated }) {
               </button>
             </div>
 
+            {optionsError && (
+              <div className="mb-3 text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                {optionsError}
+              </div>
+            )}
+
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-muted mb-1">
-                    ID da Proposta (opcional)
+                    ID da Proposta Artista (opcional)
                   </label>
                   <input
-                    name="id_proposta_casa"
-                    value={form.id_proposta_casa}
+                    name="id_proposta_artista"
+                    value={form.id_proposta_artista}
                     onChange={handleChange}
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
                     placeholder="Gerado automaticamente se vazio"
@@ -122,28 +186,32 @@ function CreatePropostaModal({ open, onClose, onCreated }) {
 
                 <div>
                   <label className="block text-sm text-muted mb-1">
-                    ID do Artista
+                    Evento
                   </label>
-                  <input
-                    name="id_artista"
-                    value={form.id_artista}
-                    onChange={handleChange}
-                    className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted mb-1">
-                    ID do Evento
-                  </label>
-                  <input
+                  <select
                     name="id_evento"
                     value={form.id_evento}
                     onChange={handleChange}
                     className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring"
                     required
-                  />
+                    disabled={loadingOptions}
+                  >
+                    <option value="">
+                      {loadingOptions
+                        ? 'Carregando eventos...'
+                        : 'Selecione um evento'}
+                    </option>
+                    {events.map((ev) => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.title}
+                      </option>
+                    ))}
+                  </select>
+                  {!loadingOptions && !events.length && (
+                    <p className="text-[11px] text-muted mt-1">
+                      Nenhum evento disponível. Crie um evento primeiro.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -216,7 +284,7 @@ function CreatePropostaModal({ open, onClose, onCreated }) {
                   onChange={handleChange}
                   rows={4}
                   className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-text focus-ring resize-none"
-                  placeholder="Descreva as condições da proposta, horários, estrutura, observações..."
+                  placeholder="Descreva condições de cachê, estrutura, horários, observações..."
                 />
               </div>
 
@@ -232,9 +300,9 @@ function CreatePropostaModal({ open, onClose, onCreated }) {
                 <button
                   type="submit"
                   className="btn-primary px-4 py-2 disabled:opacity-50"
-                  disabled={saving}
+                  disabled={saving || loadingOptions}
                 >
-                  {saving ? 'Enviando…' : 'Enviar Proposta'}
+                  {saving ? 'Enviando…' : 'Enviar proposta'}
                 </button>
               </div>
             </form>
@@ -264,16 +332,59 @@ export default function PropostasCasa() {
     setLoading(true);
     setErr('');
     try {
-      const res = await authFetch('/propostaCasa?page=1&pageSize=1000', {
-        method: 'GET',
-      });
+      const [propsRes, eventosRes, artistasRes] = await Promise.all([
+        authFetch('/propostaArtista?page=1&pageSize=1000', {
+          method: 'GET',
+        }),
+        authFetch('/evento?page=1&pageSize=1000', {
+          method: 'GET',
+        }),
+        authFetch('/artista?tipo=ARTISTA&page=1&pageSize=1000', {
+          method: 'GET',
+        }),
+      ]);
 
-      const list = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.items)
-        ? res.items
+      const list = Array.isArray(propsRes)
+        ? propsRes
+        : Array.isArray(propsRes?.items)
+        ? propsRes.items
         : [];
-      setPropostas(list);
+
+      const rawEvents = Array.isArray(eventosRes)
+        ? eventosRes
+        : eventosRes?.eventos || eventosRes?.items || [];
+
+      const rawArtistas = Array.isArray(artistasRes)
+        ? artistasRes
+        : artistasRes?.items || artistasRes?.usuarios || [];
+
+      // Criar mapa de eventos para lookup rápido
+      const eventosMap = rawEvents.reduce((acc, ev) => {
+        acc[ev.id_evento || ev.id] = ev;
+        return acc;
+      }, {});
+
+      // Criar mapa de artistas para lookup rápido
+      const artistasMap = rawArtistas.reduce((acc, art) => {
+        acc[art.id_usuario || art.id] = art;
+        return acc;
+      }, {});
+
+      const currentUser = getCurrentUser();
+      const idCasa = currentUser?.id;
+
+      // Popular os eventos e artistas nas propostas e filtrar apenas propostas da casa logada
+      const propostasComEventos = list
+        .map((p) => ({
+          ...p,
+          evento: eventosMap[p.id_evento] || null,
+          artista: p.aceito ? artistasMap[p.aceito] || null : null,
+        }))
+        .filter((p) => !idCasa || p.id_casa === idCasa);
+
+      console.log('Propostas da casa carregadas:', propostasComEventos.slice(0, 2));
+
+      setPropostas(propostasComEventos);
     } catch (e) {
       setErr(e?.message || 'Falha ao carregar propostas.');
     } finally {
@@ -297,11 +408,13 @@ export default function PropostasCasa() {
     pag.setPage(1);
   };
 
-  const formatCurrency = (v) => {
-    if (v == null || v === '') return '-';
-    const n = Number(v);
-    if (!Number.isFinite(n)) return String(v);
-    return n.toLocaleString('pt-BR', {
+  const formatCurrency = (value) => {
+    if (!value) return '-';
+
+    const number = Number(value);
+    if (Number.isNaN(number)) return value;
+
+    return number.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     });
@@ -332,12 +445,8 @@ export default function PropostasCasa() {
       >
         <div>
           <h2 className="text-2xl font-bold text-text mb-1">
-            Propostas para Artistas
+            Novas propostas enviadas para artistas
           </h2>
-          <p className="text-muted">
-            Gerencie as propostas enviadas pela sua casa de show para os
-            artistas.
-          </p>
         </div>
         <button
           type="button"
@@ -345,7 +454,7 @@ export default function PropostasCasa() {
           className="inline-flex items-center gap-2 btn-primary px-5 py-3 glow-primary"
         >
           <Plus size={18} />
-          <span>Nova Proposta</span>
+          <span>Nova proposta</span>
         </button>
       </motion.div>
 
@@ -363,7 +472,7 @@ export default function PropostasCasa() {
       >
         <div className="p-6 border-b border-border flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <h3 className="text-xl font-semibold text-text">
-            Lista de Propostas
+            Lista de propostas
           </h3>
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -465,16 +574,15 @@ export default function PropostasCasa() {
           </div>
         </div>
 
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-panel hover:scrollbar-thumb-primary/50">
+        <div className="overflow-x-auto overflow-y-visible pb-4" style={{ scrollbarWidth: 'auto', scrollbarColor: 'rgb(var(--color-primary) / 0.5) rgb(var(--color-panel))' }}>
           {loading ? (
             <p className="p-6 text-muted">Carregando propostas…</p>
           ) : pag.items.length === 0 ? (
             <p className="p-6 text-muted">
-              Nenhuma proposta encontrada. Clique em &quot;Nova Proposta&quot;
-              para criar a primeira.
+              Nenhuma proposta encontrada.
             </p>
           ) : (
-            <table className="w-full">
+            <table className="w-full" style={{ minWidth: '1200px' }}>
               <thead>
                 <tr className="border-b border-border">
                   {columns.dataProposta && (
@@ -497,6 +605,12 @@ export default function PropostasCasa() {
                       Status
                     </th>
                   )}
+                  <th className="text-left py-4 px-6 text-muted font-medium">
+                    Evento
+                  </th>
+                  <th className="text-left py-4 px-6 text-muted font-medium">
+                    Artista
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -530,6 +644,7 @@ export default function PropostasCasa() {
                       <td className="py-4 px-6">
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            p.aceito ||
                             String(p.status || '')
                               .toUpperCase()
                               .includes('ACEITA')
@@ -541,10 +656,38 @@ export default function PropostasCasa() {
                               : 'bg-primary/15 text-primary'
                           }`}
                         >
-                          {p.status || 'DISPONÍVEL'}
+                          {p.aceito ? 'ACEITA' : (p.status || 'DISPONÍVEL')}
                         </span>
                       </td>
                     )}
+                    <td className="py-4 px-6">
+                      <div>
+                        <span className="text-xs text-muted block">
+                          {p.evento?.titulo || 'Evento não especificado'}
+                        </span>
+                        {p.aceito && (
+                          <span className="text-[10px] text-emerald-400 mt-1 inline-block">
+                            ✓ Aceita por artista
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      {p.artista ? (
+                        <div>
+                          <span className="text-sm text-text font-medium block">
+                            {p.artista.nome || p.artista.name || 'Artista'}
+                          </span>
+                          <span className="text-[10px] text-emerald-400">
+                            ✓ Confirmado
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted italic">
+                          Aguardando artista
+                        </span>
+                      )}
+                    </td>
                   </motion.tr>
                 ))}
               </tbody>

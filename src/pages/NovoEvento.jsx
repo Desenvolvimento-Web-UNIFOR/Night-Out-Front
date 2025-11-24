@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -8,6 +8,8 @@ import {
   MapPin,
   Clock,
   Filter,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 import usePaginatedData from '../hooks/usePaginatedData';
 import Pagination from '../components/Pagination';
@@ -16,6 +18,7 @@ import { authFetch, getCurrentUser } from '../services/auth';
 
 function CreateEventModal({ open, onClose, onCreated }) {
   const currentUser = getCurrentUser();
+  const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({
     titulo: '',
@@ -26,6 +29,8 @@ function CreateEventModal({ open, onClose, onCreated }) {
     status: 'ATIVO',
   });
   const [saving, setSaving] = useState(false);
+  const [eventImage, setEventImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -35,6 +40,7 @@ function CreateEventModal({ open, onClose, onCreated }) {
           prev.data_inicio ||
           new Date().toISOString().slice(0, 16),
       }));
+      setEventImage(null); // Resetar imagem ao abrir o modal
     }
   }, [open]);
 
@@ -43,6 +49,38 @@ function CreateEventModal({ open, onClose, onCreated }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione uma imagem válida.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result;
+        setEventImage(base64String);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -76,9 +114,16 @@ function CreateEventModal({ open, onClose, onCreated }) {
         body: JSON.stringify(payload),
       });
 
+      const created =
+        res?.evento || res?.event || res?.data || res || payload;
+
+      // Salvar imagem do evento no localStorage se houver
+      const eventoId = created.id_evento || created.id;
+      if (eventImage && eventoId) {
+        localStorage.setItem(`event_image_${eventoId}`, eventImage);
+      }
+
       if (onCreated) {
-        const created =
-          res?.evento || res?.event || res?.data || res || payload;
         onCreated(created);
       }
 
@@ -121,6 +166,48 @@ function CreateEventModal({ open, onClose, onCreated }) {
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
+              {/* Upload de Imagem do Evento */}
+              <div>
+                <label className="block text-sm text-muted mb-2">
+                  Foto do Evento
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <div
+                  onClick={handleImageClick}
+                  className="relative w-full h-48 rounded-xl overflow-hidden cursor-pointer border-2 border-dashed border-border hover:border-primary/50 transition-all group bg-panel/50"
+                >
+                  {eventImage ? (
+                    <>
+                      <img
+                        src={eventImage}
+                        alt="Preview do evento"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Camera className="text-white" size={32} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted group-hover:text-primary transition-colors">
+                      <ImageIcon size={40} className="mb-2" />
+                      <p className="text-sm font-medium">Clique para adicionar foto</p>
+                      <p className="text-xs mt-1">PNG, JPG até 5MB</p>
+                    </div>
+                  )}
+                  {uploadingImage && (
+                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                      <p className="text-white text-sm">Carregando...</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm text-muted mb-1">
                   Título do Evento

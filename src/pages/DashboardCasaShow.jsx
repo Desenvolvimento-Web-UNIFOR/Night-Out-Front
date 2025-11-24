@@ -24,9 +24,10 @@ export default function DashboardCasaShow() {
       try {
         const currentUser = getCurrentUser();
 
-        const [eventRes, propsRes] = await Promise.all([
+        const [eventRes, propsRes, artistasRes] = await Promise.all([
           authFetch('/evento?page=1&pageSize=1000', { method: 'GET' }),
-          authFetch('/propostaCasa?page=1&pageSize=1000', { method: 'GET' }),
+          authFetch('/propostaArtista?page=1&pageSize=1000', { method: 'GET' }),
+          authFetch('/artista?tipo=ARTISTA&page=1&pageSize=1000', { method: 'GET' }),
         ]);
 
         const rawEvents = Array.isArray(eventRes)
@@ -47,8 +48,51 @@ export default function DashboardCasaShow() {
           ? propsRes.items
           : [];
 
-        setEvents(filteredEvents);
-        setPropostas(rawPropostas);
+        const rawArtistas = Array.isArray(artistasRes)
+          ? artistasRes
+          : artistasRes?.items || artistasRes?.usuarios || [];
+
+        // Criar mapa de artistas para lookup rápido
+        const artistasMap = rawArtistas.reduce((acc, art) => {
+          acc[art.id_usuario || art.id] = art;
+          return acc;
+        }, {});
+
+        // Criar mapa de eventos para lookup rápido
+        const eventosMap = filteredEvents.reduce((acc, ev) => {
+          acc[ev.id_evento || ev.id] = ev;
+          return acc;
+        }, {});
+
+        // Popular os eventos nas propostas e filtrar propostas da casa
+        const propostasComEventos = rawPropostas
+          .map((p) => ({
+            ...p,
+            evento: eventosMap[p.id_evento] || null,
+            artista: p.aceito ? artistasMap[p.aceito] || null : null,
+          }))
+          .filter((p) => !currentUser?.id || p.id_casa === currentUser.id);
+
+        // Adicionar artistas confirmados aos eventos
+        const artistasPorEvento = {};
+        propostasComEventos.forEach((p) => {
+          if (p.aceito && p.id_evento) {
+            if (!artistasPorEvento[p.id_evento]) {
+              artistasPorEvento[p.id_evento] = [];
+            }
+            if (p.artista) {
+              artistasPorEvento[p.id_evento].push(p.artista);
+            }
+          }
+        });
+
+        const eventosComArtistas = filteredEvents.map((ev) => ({
+          ...ev,
+          artistas: artistasPorEvento[ev.id_evento || ev.id] || [],
+        }));
+
+        setEvents(eventosComArtistas);
+        setPropostas(propostasComEventos);
       } catch (e) {
         setErr(e?.message || 'Falha ao carregar dados do painel.');
       } finally {
@@ -223,7 +267,7 @@ export default function DashboardCasaShow() {
           <div className="flex items-center gap-3 mb-4">
             <Calendar className="text-primary" size={24} />
             <h2 className="text-xl font-semibold text-text">
-              Próximos eventos da casa
+              Próximo evento da casa
             </h2>
           </div>
 
@@ -257,6 +301,21 @@ export default function DashboardCasaShow() {
                       <MapPin size={14} />
                       <span>{ev.local || 'Local a definir'}</span>
                     </div>
+                    {ev.artistas && ev.artistas.length > 0 && (
+                      <div className="flex items-start gap-2 mt-2">
+                        <Music size={14} className="mt-0.5" />
+                        <div className="flex flex-wrap gap-1">
+                          {ev.artistas.map((artist, idx) => (
+                            <span 
+                              key={idx}
+                              className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-medium"
+                            >
+                              {artist.nome || artist.name || 'Artista'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {ev.status && (
                       <div className="flex items-center gap-2">
                         <Clock size={14} />
@@ -292,50 +351,59 @@ export default function DashboardCasaShow() {
                     p.id_proposta_casa ||
                     `${p.id_evento}-${p.id_artista}-${idx}`
                   }
-                  className="min-w-[260px] max-w-xs glass-light p-4 rounded-2xl snap-center shrink-0"
+                  className="min-w-[280px] max-w-sm glass-light p-5 rounded-2xl snap-center shrink-0 border border-border/50 hover:border-primary/30 transition-all"
                 >
-                  <div className="space-y-1 text-sm text-muted">
-                    <div>
-                      <span className="block text-[11px]">
-                        Data da proposta
-                      </span>
-                      <span className="text-text">
+                  <div className="mb-4">
+                    <h4 className="text-base font-semibold text-text mb-1 line-clamp-1">
+                      {p.evento?.titulo || 'Evento não especificado'}
+                    </h4>
+                    {p.artista && (
+                      <p className="text-xs text-emerald-400 flex items-center gap-1">
+                        <Music size={12} />
+                        {p.artista.nome || p.artista.name || 'Artista'}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2.5 text-sm mb-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted text-xs">Data da proposta</span>
+                      <span className="text-text font-medium">
                         {formatDate(p.data_proposta)}
                       </span>
                     </div>
-                    <div>
-                      <span className="block text-[11px]">
-                        Data do evento
-                      </span>
-                      <span className="text-text">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted text-xs">Data do evento</span>
+                      <span className="text-text font-medium">
                         {formatDate(p.data_evento)}
                       </span>
                     </div>
-                    <div>
-                      <span className="block text-[11px]">
-                        Valor ofertado
-                      </span>
-                      <span className="text-text font-semibold">
+                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                      <span className="text-muted text-xs">Valor ofertado</span>
+                      <span className="text-emerald-400 font-bold text-base">
                         {formatCurrency(p.valor_ofertado)}
                       </span>
                     </div>
                   </div>
 
-                  <span
-                    className={`mt-3 inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                      String(p.status || '')
-                        .toUpperCase()
-                        .includes('ACEITA')
-                        ? 'bg-emerald-500/15 text-emerald-400'
-                        : String(p.status || '')
-                            .toUpperCase()
-                            .includes('RECUS')
-                        ? 'bg-red-500/15 text-red-400'
-                        : 'bg-primary/15 text-primary'
-                    }`}
-                  >
-                    {p.status || 'DISPONÍVEL'}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                        p.aceito ||
+                        String(p.status || '')
+                          .toUpperCase()
+                          .includes('ACEITA')
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : String(p.status || '')
+                              .toUpperCase()
+                              .includes('RECUS')
+                          ? 'bg-red-500/15 text-red-400 border border-red-500/30'
+                          : 'bg-primary/15 text-primary border border-primary/30'
+                      }`}
+                    >
+                      {p.aceito ? 'ACEITA' : (p.status || 'DISPONÍVEL')}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -344,34 +412,40 @@ export default function DashboardCasaShow() {
       </div>
 
       <motion.div className="glass p-6">
-        <h2 className="text-xl font-semibold text-text mb-4">
-          Calendário de eventos do mês
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-text flex items-center gap-2">
+            <Calendar className="text-primary" size={22} />
+            Calendário de eventos do mês
+          </h2>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded bg-orange-500"></div>
+              <span className="text-muted">Com evento</span>
+            </div>
+          </div>
+        </div>
 
-        <div className="bg-panel rounded-2xl p-4 border border-border">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-sm font-medium text-text capitalize">
+        <div className="bg-panel/50 rounded-2xl p-6 border border-border/50">
+          <div className="flex justify-between items-center mb-6">
+            <span className="text-base font-semibold text-text capitalize">
               {monthLabel}
-            </span>
-            <span className="text-xs text-muted">
-              Dias em laranja possuem evento.
             </span>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 text-[11px] text-muted mb-2">
-            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d) => (
-              <div key={d} className="text-center">
+          <div className="grid grid-cols-7 gap-3 text-xs font-medium text-muted mb-4 pb-3 border-b border-border/50">
+            {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map((d, idx) => (
+              <div key={idx} className="text-center">
                 {d}
               </div>
             ))}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {weeks.map((week, wIdx) => (
-              <div key={wIdx} className="grid grid-cols-7 gap-2">
+              <div key={wIdx} className="grid grid-cols-7 gap-3">
                 {week.map((day, dIdx) => {
                   if (!day) {
-                    return <div key={dIdx} className="h-9" />;
+                    return <div key={dIdx} className="h-12" />;
                   }
 
                   const hasEvents = !!eventsByDay[day];
@@ -380,27 +454,27 @@ export default function DashboardCasaShow() {
                     month === now.getMonth() &&
                     year === now.getFullYear();
 
-                  const baseClasses =
-                    'w-9 h-9 flex items-center justify-center rounded-lg text-sm transition-all';
-                  const emptyClasses =
-                    'bg-panel text-text border border-border';
-                  const eventClasses =
-                    'bg-orange-500 text-black font-semibold shadow-[0_0_15px_rgba(249,115,22,0.8)]';
-                  const todayRing =
-                    'ring-1 ring-offset-1 ring-offset-panel ring-white/40';
+                  const eventCount = eventsByDay[day]?.length || 0;
 
                   return (
                     <div
                       key={dIdx}
-                      className={[
-                        baseClasses,
-                        hasEvents ? eventClasses : emptyClasses,
-                        isToday ? todayRing : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
+                      className={`
+                        h-12 flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-all cursor-pointer
+                        ${
+                          hasEvents
+                            ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 hover:scale-105'
+                            : 'bg-panel/80 text-text border border-border/50 hover:bg-panel hover:border-primary/30'
+                        }
+                        ${isToday ? 'ring-2 ring-primary ring-offset-2 ring-offset-bg' : ''}
+                      `}
                     >
-                      {day}
+                      <span className={hasEvents ? 'font-bold' : ''}>{day}</span>
+                      {hasEvents && eventCount > 1 && (
+                        <span className="text-[9px] opacity-90 mt-0.5">
+                          {eventCount} eventos
+                        </span>
+                      )}
                     </div>
                   );
                 })}

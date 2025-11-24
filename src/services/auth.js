@@ -82,8 +82,10 @@ function resolveBaseUrl(path) {
   if (
     path.startsWith("/evento") ||
     path.startsWith("/eventos") ||
-    path.startsWith("/propostaCasa") ||
+    path.startsWith("/propostas") ||
+    path.startsWith("/proposta") ||
     path.startsWith("/propostaArtista") ||
+    path.startsWith("/propostaCasa") ||
     path.startsWith("/eventoArtista")
   ) {
     return BASE_EVENTS_URL;
@@ -95,6 +97,7 @@ function resolveBaseUrl(path) {
 
   return BASE_USERS_URL;
 }
+
 
 export async function authFetch(path, options = {}) {
   const token = getToken();
