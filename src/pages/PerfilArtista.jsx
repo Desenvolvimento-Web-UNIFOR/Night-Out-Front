@@ -14,13 +14,12 @@ export default function PerfilArtista() {
   useEffect(() => {
     const currentUser = getCurrentUser();
     setUser(currentUser);
-    
-    const savedAvatar = localStorage.getItem(`avatar_${currentUser.id}`);
-    if (savedAvatar) {
-      setAvatar(savedAvatar);
-    }
 
     if (currentUser?.id) {
+      const savedAvatar = localStorage.getItem(`avatar_${currentUser.id}`);
+      if (savedAvatar) {
+        setAvatar(savedAvatar);
+      }
       fetchUserDetails(currentUser);
     } else {
       setLoading(false);
@@ -61,14 +60,38 @@ export default function PerfilArtista() {
     setUploading(true);
 
     try {
+      const img = new Image();
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        setAvatar(base64String);
-        localStorage.setItem(`avatar_${user.id}`, base64String);
+      
+      reader.onload = (event) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Redimensionar para 400x400 (avatar)
+          const size = 400;
+          canvas.width = size;
+          canvas.height = size;
+          
+          // Calcular crop centralizado
+          const scale = Math.max(size / img.width, size / img.height);
+          const x = (size / 2) - (img.width / 2) * scale;
+          const y = (size / 2) - (img.height / 2) * scale;
+          
+          ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+          
+          // Comprimir para JPEG com qualidade 0.8
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          setAvatar(compressedBase64);
+          localStorage.setItem(`avatar_${user.id}`, compressedBase64);
+          setUploading(false);
+        };
+        img.src = event.target.result;
       };
+      
       reader.readAsDataURL(file);
-    } finally {
+    } catch (error) {
+      alert('Erro ao processar imagem. Tente novamente.');
       setUploading(false);
     }
   };
