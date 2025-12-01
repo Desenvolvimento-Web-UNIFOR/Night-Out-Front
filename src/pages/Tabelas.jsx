@@ -1928,7 +1928,7 @@ export default function Tabelas() {
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-3">
                             {(() => {
-                              const userId = employee.id_usuario || employee.id;
+                              const userId = employee.id || employee.id_usuario;
                               const savedAvatar = localStorage.getItem(`avatar_${userId}`);
                               return savedAvatar ? (
                                 <img
@@ -1945,7 +1945,7 @@ export default function Tabelas() {
                               );
                             })()}
                             <button
-                              onClick={() => setViewEmployeeModal({ open: true, id: employee.id_usuario || employee.id })}
+                              onClick={() => setViewEmployeeModal({ open: true, id: employee.id || employee.id_usuario })}
                               className="font-medium text-primary hover:text-primary-light transition-colors cursor-pointer text-left"
                             >
                               {employee.nome || employee.name || '-'}
@@ -2125,7 +2125,7 @@ export default function Tabelas() {
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-3">
                             {(() => {
-                              const userId = artist.id_usuario || artist.id;
+                              const userId = artist.id || artist.id_usuario;
                               const savedAvatar = localStorage.getItem(`avatar_${userId}`);
                               return savedAvatar ? (
                                 <img
@@ -2142,7 +2142,7 @@ export default function Tabelas() {
                               );
                             })()}
                             <button
-                              onClick={() => setViewArtistModal({ open: true, id: artist.id_usuario || artist.id })}
+                              onClick={() => setViewArtistModal({ open: true, id: artist.id || artist.id_usuario })}
                               className="font-medium text-primary hover:text-primary-light transition-colors cursor-pointer text-left"
                             >
                               {artist.nome || artist.name || '-'}
@@ -2328,7 +2328,7 @@ export default function Tabelas() {
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-3">
                             {(() => {
-                              const userId = venue.id_usuario || venue.id;
+                              const userId = venue.id || venue.id_usuario;
                               const savedAvatar = localStorage.getItem(`avatar_${userId}`);
                               return savedAvatar ? (
                                 <img
@@ -2345,7 +2345,7 @@ export default function Tabelas() {
                               );
                             })()}
                             <button
-                              onClick={() => setViewVenueModal({ open: true, id: venue.id_usuario || venue.id })}
+                              onClick={() => setViewVenueModal({ open: true, id: venue.id || venue.id_usuario })}
                               className="font-medium text-primary hover:text-primary-light transition-colors cursor-pointer text-left"
                             >
                               {venue.nome_fantasia || '-'}
@@ -2512,7 +2512,7 @@ export default function Tabelas() {
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-3">
                             {(() => {
-                              const userId = client.id_usuario || client.id;
+                              const userId = client.id || client.id_usuario;
                               const savedAvatar = localStorage.getItem(`avatar_${userId}`);
                               return savedAvatar ? (
                                 <img
@@ -2529,7 +2529,7 @@ export default function Tabelas() {
                               );
                             })()}
                             <button
-                              onClick={() => setViewClientModal({ open: true, id: client.id_usuario || client.id })}
+                              onClick={() => setViewClientModal({ open: true, id: client.id || client.id_usuario })}
                               className="font-medium text-primary hover:text-primary-light transition-colors cursor-pointer text-left"
                             >
                               {client.nome || client.name || '-'}

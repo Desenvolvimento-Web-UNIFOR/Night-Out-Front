@@ -72,13 +72,48 @@ function CreateEventModal({ open, onClose, onCreated }) {
     setUploadingImage(true);
 
     try {
+      // Comprimir imagem antes de salvar
+      const img = new Image();
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        setEventImage(base64String);
+      
+      reader.onload = (event) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Redimensionar para máximo 800x600 mantendo proporção
+          let width = img.width;
+          let height = img.height;
+          const maxWidth = 800;
+          const maxHeight = 600;
+          
+          if (width > height) {
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = (width * maxHeight) / height;
+              height = maxHeight;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Comprimir para JPEG com qualidade 0.7
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          setEventImage(compressedBase64);
+          setUploadingImage(false);
+        };
+        img.src = event.target.result;
       };
+      
       reader.readAsDataURL(file);
-    } finally {
+    } catch (error) {
+      alert('Erro ao processar imagem. Tente novamente.');
       setUploadingImage(false);
     }
   };

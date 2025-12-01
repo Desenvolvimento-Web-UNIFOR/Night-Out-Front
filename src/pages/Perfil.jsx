@@ -20,13 +20,17 @@ export default function Perfil() {
 
     setUser(currentUser);
 
-    const savedAvatar = localStorage.getItem(`avatar_${currentUser.id}`);
-    if (savedAvatar) {
-      setAvatar(savedAvatar);
-    }
+    if (currentUser?.id) {
+      const savedAvatar = localStorage.getItem(`avatar_${currentUser.id}`);
+      if (savedAvatar) {
+        setAvatar(savedAvatar);
+      }
 
-    if (currentUser?.id && currentUser?.role) {
-      fetchUserDetails(currentUser);
+      if (currentUser?.role) {
+        fetchUserDetails(currentUser);
+      } else {
+        setLoading(false);
+      }
     } else {
       setLoading(false);
     }
@@ -78,18 +82,37 @@ export default function Perfil() {
     setUploading(true);
 
     try {
+      const img = new Image();
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        setAvatar(base64String);
-        if (user?.id) {
-          localStorage.setItem(`avatar_${user.id}`, base64String);
-        }
+      
+      reader.onload = (event) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          const size = 400;
+          canvas.width = size;
+          canvas.height = size;
+          
+          const scale = Math.max(size / img.width, size / img.height);
+          const x = (size / 2) - (img.width / 2) * scale;
+          const y = (size / 2) - (img.height / 2) * scale;
+          
+          ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          setAvatar(compressedBase64);
+          if (user?.id) {
+            localStorage.setItem(`avatar_${user.id}`, compressedBase64);
+          }
+          setUploading(false);
+        };
+        img.src = event.target.result;
       };
+      
       reader.readAsDataURL(file);
-    } catch {
-      alert('Erro ao fazer upload da foto. Tente novamente.');
-    } finally {
+    } catch (error) {
+      alert('Erro ao processar imagem. Tente novamente.');
       setUploading(false);
     }
   };
